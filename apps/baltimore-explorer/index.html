@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baltimore Real Estate Explorer</title>
+    <style>
+      .app {
+        --bg:#f6f7f9; --card:#fff; --border:#e4e7ec; --text:#101828; --text-secondary:#475467;
+        --text-muted:#667085; --accent:#5288c1; --accent-ui:#5288c1; --skeleton:#e4e7ec; --focus:#1d4ed8; --radius:10px;
+        display:flex; height:100vh; color:var(--text); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased;
+      }
+      .app[data-theme="dark"]{ --bg:#0f172a; --card:#1e293b; --border:#334155; --text:#f1f5f9; --text-secondary:#cbd5e1; --text-muted:#94a3b8; --skeleton:#334155; --accent-ui:#7dd3fc; --focus:#93c5fd; }
+      *{box-sizing:border-box} html,body{margin:0;height:100%}
+      :focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+      #map{flex:1;min-width:50%}
+      .sidebar{width:380px;flex:none;overflow-y:auto;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column}
+      .head{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+      .head h1{font-size:15px;margin:0;letter-spacing:-.01em} .head .count{font-size:12px;color:var(--text-muted);margin-top:2px}
+      .theme-btn{font:inherit;font-size:15px;width:32px;height:32px;flex:none;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:8px}
+      .app-desc{margin:0;padding:12px 18px;font-size:13px;line-height:1.45;color:var(--text-secondary);background:var(--card);border-bottom:1px solid var(--border)}
+      .content{padding:16px 18px 40px;display:flex;flex-direction:column;gap:18px}
+      .block{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+      .block-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin:0 0 10px}
+      .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+      .stat .v{font-size:20px;font-weight:700;line-height:1.15} .stat .l{font-size:11px;color:var(--text-secondary);margin-top:3px}
+      .bars{display:flex;flex-direction:column;gap:6px}
+      .bar-row{display:grid;grid-template-columns:96px 1fr 56px;align-items:center;gap:8px;background:none;border:none;padding:4px;border-radius:6px;cursor:pointer;color:var(--text);font:inherit;text-align:left}
+      .bar-row:hover{background:var(--bg)} .bar-row.locked{box-shadow:inset 0 0 0 2px var(--accent-ui)}
+      .bar-row.locked .bar-label::after{content:" ✓";color:var(--accent-ui);font-weight:700}
+      .bar-label{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .bar-track{height:16px;background:var(--bg);border-radius:4px;overflow:hidden}
+      .bar-fill{display:block;height:100%;border-radius:4px;background:var(--accent)}
+      .bar-val{font-size:11px;color:var(--text-secondary);text-align:right;font-variant-numeric:tabular-nums}
+      .dist{font-size:13px;line-height:1.5;color:var(--text-secondary);margin:0} .dist strong{color:var(--text)}
+      .legend{display:flex;flex-direction:column;gap:6px} .legend-row{display:flex;align-items:center;gap:9px;font-size:12px}
+      .legend-sw{width:12px;height:12px;border-radius:3px;flex:none}
+      .detail{display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
+      .detail-row{display:flex;justify-content:space-between;gap:12px;font-size:12px}
+      .detail-k{color:var(--text-muted);flex:none;max-width:48%} .detail-v{text-align:right;word-break:break-word}
+      .muted{font-size:12px;color:var(--text-muted);margin:0}
+      .skeleton{animation:pulse 1.4s ease-in-out infinite;background:var(--skeleton);border-color:transparent;border-radius:var(--radius)}
+      .sk-stat{height:64px} .sk-chart{height:96px}
+      @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+      @media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+      @media (max-width:768px){.app{flex-direction:column}#map{min-height:45vh}.sidebar{width:auto;border-left:none;border-top:1px solid var(--border)}}
+    </style>
+  </head>
+  <body>
+    <div class="app" id="app" data-theme="light">
+      <div id="map"></div>
+      <aside class="sidebar">
+        <div class="head">
+          <div><h1>Baltimore Real Estate Explorer</h1><div class="count" id="count">Loading…</div></div>
+          <button class="theme-btn" id="theme" aria-label="Toggle light/dark theme">◐</button>
+        </div>
+        <p class="app-desc">Browse Baltimore home listings — see the price spread and home-type mix, filter by type, and click any listing for its details.</p>
+        <div class="content" id="content">
+          <div class="stat-grid"><div class="stat skeleton sk-stat"></div><div class="stat skeleton sk-stat"></div><div class="stat skeleton sk-stat"></div><div class="stat skeleton sk-stat"></div></div>
+          <div class="skeleton sk-chart"></div>
+        </div>
+      </aside>
+    </div>
+    <script type="module">
+      import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+      const CONFIG = { mapId: "jz9BmgQoPQ9BOXNVycYUxUjD", layerName: "Listings feed" };
+      const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+      const fmt = (v) => v==null||Number.isNaN(v) ? "—" : Math.abs(v)>=1e6 ? "$"+(v/1e6).toFixed(2)+"M" : Math.abs(v)>=1e4 ? "$"+(v/1e3).toFixed(0)+"K" : Number.isInteger(v) ? v.toLocaleString() : v.toFixed(1);
+      const n = (v) => v==null||Number.isNaN(v) ? "—" : Number.isInteger(v) ? v.toLocaleString() : v.toFixed(1);
+      const el = (t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;};
+      const andF=(a,b)=>(!a?b:!b?a:[a,"and",b]);
+
+      async function init() {
+        const felt = await Felt.embed(document.getElementById("map"), CONFIG.mapId, { uiControls:{showLegend:false,cooperativeGestures:false} });
+        const layers = (await felt.getLayers()).filter(Boolean);
+        const primary = layers.find((l)=>l.name===CONFIG.layerName) || layers[0];
+        const pid = primary.id;
+        const schema = await felt.getLayerSchema(pid);
+        const nameMap = {}; schema.attributes.forEach((a)=>(nameMap[a.id]=a.displayName));
+        const TOTAL = schema.featureCount;
+        document.getElementById("count").textContent = `${TOTAL.toLocaleString()} listings`;
+        const accent = (Array.isArray(primary.style?.paint?.color) ? primary.style.paint.color[0] : primary.style?.paint?.color) || "#5288c1";
+        if (typeof accent==="string" && accent.startsWith("#")) document.querySelector(".app").style.setProperty("--accent", accent);
+
+        const sources = new Map();
+        const apply = async ()=>{ const t=[...sources.values()]; await felt.setLayerFilters({layerId:pid, filters: t.length?t.reduce((a,x)=>andF(a,x)):null}); refreshStats(); };
+        const setSrc=(k,t)=>{t?sources.set(k,t):sources.delete(k);apply();};
+        const locked=()=>{const t=[...sources.entries()].filter(([k])=>!k.endsWith("-hover")).map(([,x])=>x);return t.length?t.reduce((a,x)=>andF(a,x)):null;};
+
+        const content = document.getElementById("content"); content.innerHTML="";
+
+        // Stat cards
+        const sg = el("div","stat-grid"); content.appendChild(sg);
+        const STATS=[{l:"Listings",agg:"count"},{l:"Median price",median:"price"},{l:"Avg beds",agg:"avg",a:"beds"},{l:"Avg sqft",agg:"avg",a:"sqft"}];
+        const vEls=STATS.map((s)=>{const c=el("div","stat");c.innerHTML=`<div class="v">—</div><div class="l">${esc(s.l)}</div>`;sg.appendChild(c);return c.querySelector(".v");});
+        // median price (client-side, honest for skewed money)
+        let medianPrice=null;
+        const fc=await felt.getFeatures({layerId:pid,pageSize:1000,select:["price"]}).catch(()=>null);
+        const prices=((fc?.features)||[]).map((f)=>f.properties?.price).filter((v)=>typeof v==="number").sort((a,b)=>a-b);
+        const q=(p)=>prices.length?prices[Math.min(prices.length-1,Math.floor(p*prices.length))]:null;
+        medianPrice=q(.5);
+        let statRun=0;
+        async function refreshStats(){
+          const my=++statRun; const base=locked();
+          const [cnt,beds,sqft]=await Promise.all([
+            felt.getAggregates({layerId:pid,filters:base,aggregation:{methods:["count"]}}),
+            felt.getAggregates({layerId:pid,filters:base,aggregation:{methods:["avg"],attribute:"beds"}}),
+            felt.getAggregates({layerId:pid,filters:base,aggregation:{methods:["avg"],attribute:"sqft"}}),
+          ]);
+          if(my!==statRun)return;
+          vEls[0].textContent=n(cnt.count); vEls[1].textContent=fmt(medianPrice); vEls[2].textContent=n(beds.avg); vEls[3].textContent=n(sqft.avg);
+        }
+        await refreshStats();
+
+        // Bar chart: homeType (low-cardinality), hover-filter + click-lock
+        const bar=el("div","block"); bar.innerHTML=`<p class="block-title">${esc(nameMap["homeType"]||"Home type")}</p><div class="bars" id="bars" role="list"></div>`; content.appendChild(bar);
+        const cats=(await felt.getCategoryData({layerId:pid,attribute:"homeType"})).filter((c)=>c.key!=null).map((c)=>({key:String(c.key),value:c.value})).sort((a,b)=>b.value-a.value);
+        const maxB=Math.max(...cats.map((c)=>c.value),1); const barsEl=bar.querySelector("#bars"); let lock=null;
+        barsEl.addEventListener("mouseleave",()=>setSrc("ht-hover",null));
+        cats.forEach((c)=>{const pct=Math.round(c.value/TOTAL*100); const b=el("button","bar-row");b.type="button";b.setAttribute("role","listitem");
+          b.setAttribute("aria-label",`${c.key}: ${c.value} listings, ${pct}%. Activate to filter.`);
+          b.innerHTML=`<span class="bar-label">${esc(c.key)}</span><span class="bar-track"><span class="bar-fill" style="width:${c.value/maxB*100}%"></span></span><span class="bar-val">${n(c.value)}</span>`;
+          b.addEventListener("mouseenter",()=>setSrc("ht-hover",["homeType","eq",c.key]));
+          b.addEventListener("click",()=>{lock=lock===c.key?null:c.key;[...barsEl.children].forEach((x)=>x.classList.remove("locked"));if(lock)b.classList.add("locked");setSrc("ht-lock",lock?["homeType","eq",lock]:null);});
+          barsEl.appendChild(b);});
+
+        // Price spread (honest summary, not a skew-collapsed histogram)
+        if(prices.length){const d=el("div","block");d.innerHTML=`<p class="block-title">Price spread</p><p class="dist">Half of listings are under <strong>${fmt(q(.5))}</strong>; 90% under <strong>${fmt(q(.9))}</strong>; highest <strong>${fmt(prices[prices.length-1])}</strong>.</p>`;content.appendChild(d);}
+
+        // Legend
+        const lg=el("div","block");lg.innerHTML=`<p class="block-title">Legend</p><div class="legend"><div class="legend-row"><span class="legend-sw" style="background:var(--accent)"></span>Listings</div></div>`;content.appendChild(lg);
+
+        // Detail (escaped, null/url/internal fields hidden)
+        const det=el("div","block");det.innerHTML=`<p class="block-title">Listing details</p><div id="detail"><p class="muted">Click a listing on the map to see its details.</p></div>`;content.appendChild(det);
+        const detEl=det.querySelector("#detail");
+        felt.onPointerClick({handler:(e)=>{const f=e.features&&e.features[0];if(!f)return;const m=f.layerId===pid?nameMap:{};const pr=f.properties||{};
+          const keys=Object.keys(pr).filter((k)=>!k.startsWith("felt:")&&!/url$/i.test(k)&&pr[k]!=null&&pr[k]!=="").slice(0,24);
+          detEl.innerHTML=keys.length?`<div class="detail">${keys.map((k)=>`<div class="detail-row"><span class="detail-k">${esc(m[k]||k)}</span><span class="detail-v">${esc(String(pr[k]))}</span></div>`).join("")}</div>`:`<p class="muted">No details.</p>`;}});
+
+        document.getElementById("theme").addEventListener("click",()=>{const a=document.getElementById("app");a.dataset.theme=a.dataset.theme==="light"?"dark":"light";});
+        window.__ready=true;
+      }
+      init().catch((err)=>{console.error("SDK failed:",err);document.getElementById("content").innerHTML=`<p class="muted" style="padding:20px">Could not load. <a href="https://felt.com/map/${CONFIG.mapId}" target="_blank" rel="noreferrer">View on Felt</a>.</p>`;});
+    </script>
+  </body>
+</html>

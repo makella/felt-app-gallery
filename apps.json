@@ -1,5 +1,14 @@
 [
   {
+    "slug": "baltimore-explorer",
+    "title": "Baltimore Real Estate Explorer",
+    "description": "A minimal happy-path app built cold from one instruction: stat cards, home-type breakdown with click-to-filter, an honest price spread, and click-to-detail. The simple core of the skill, nothing advanced.",
+    "map_url": "https://felt.com/map/Baltimore-real-estate-jz9BmgQoPQ9BOXNVycYUxUjD",
+    "author": "makella",
+    "published_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/baltimore-explorer/ — add a price range filter."
+  },
+  {
     "slug": "santa-barbara-fire-gaps-v2",
     "title": "Santa Barbara — Fire Response Gap Analysis (v2, reviewer-grade)",
     "description": "Rebuilt after a front-end / GIS-dev / GIS-specialist review: leads with a methodology + caveats block, honest counts (no avg of a 1–2 flag), risk-flag discrimination badges, an honest area summary instead of a skew-collapsed histogram, escaped feature data (XSS-safe), feature-count warnings on large layers, AA contrast, and keyboard focus states. Candidate sites are labeled as a heuristic, not an optimization.",
