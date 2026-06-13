@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transit-Oriented Development Trends</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --accent: #6366f1;
+            --accent-dim: rgba(99, 102, 241, 0.10);
+            --accent-border: rgba(99, 102, 241, 0.25);
+
+            --pane-bg: rgba(255, 255, 255, 0.82);
+            --pane-bg-opaque: #FFFFFF;
+            --pane-shine: transparent;
+            --bg-secondary: #F0F2F4;
+            --card: rgba(255, 255, 255, 0.6);
+            --card-hover: rgba(0, 0, 0, 0.03);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-strong: rgba(0, 0, 0, 0.12);
+            --text: #16191D;
+            --text-secondary: #586274;
+            --text-muted: #8892A5;
+            --focus: rgba(243, 63, 117, 0.4);
+
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 16px;
+
+            --pane-shadow:
+                0 0 0 1px rgba(0, 0, 0, 0.04),
+                0 0 1px rgba(24, 39, 75, 0.12),
+                0 2px 4px rgba(24, 39, 75, 0.06),
+                0 4px 8px rgba(24, 39, 75, 0.06),
+                0 8px 24px rgba(24, 39, 75, 0.08);
+            --shadow-sm: 0 0 1px rgba(24, 39, 75, 0.18);
+            --shadow-md: 0 0 1px rgba(24, 39, 75, 0.12), 0 2px 4px rgba(24, 39, 75, 0.06);
+
+            --skeleton-from: rgba(0, 0, 0, 0.04);
+            --skeleton-to: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] {
+            --pane-bg: rgba(17, 17, 17, 0.85);
+            --pane-bg-opaque: #111111;
+            --pane-shine: rgba(255, 255, 255, 0.06);
+            --bg-secondary: rgba(255, 255, 255, 0.04);
+            --card: rgba(255, 255, 255, 0.04);
+            --card-hover: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.14);
+            --text: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.38);
+            --focus: rgba(243, 63, 117, 0.5);
+
+            --pane-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 0 1px rgba(0, 0, 0, 0.5),
+                0 4px 8px rgba(0, 0, 0, 0.25),
+                0 12px 32px rgba(0, 0, 0, 0.3);
+            --shadow-sm: 0 0 1px rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 0 1px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+
+            --skeleton-from: rgba(255, 255, 255, 0.04);
+            --skeleton-to: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 13px; line-height: 1.5;
+            height: 100vh; overflow: hidden;
+            background: #000; color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #map { position: absolute; inset: 0; z-index: 0; }
+
+        .pane {
+            position: absolute; top: 16px; right: 16px; bottom: 16px;
+            width: 380px; max-width: calc(100vw - 32px); z-index: 10;
+            display: flex; flex-direction: column;
+            background: var(--pane-bg);
+            -webkit-backdrop-filter: blur(12px) saturate(1.4);
+            backdrop-filter: blur(12px) saturate(1.4);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--pane-shadow);
+            border: 1px solid var(--pane-shine);
+            overflow: hidden;
+        }
+        .pane-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .pane-scroll::-webkit-scrollbar { width: 5px; }
+        .pane-scroll::-webkit-scrollbar-track { background: transparent; }
+        .pane-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+        .header { padding: 20px 16px 16px; flex-shrink: 0; }
+        .header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .header h1 { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.35; letter-spacing: -0.01em; }
+        .header .meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 400; }
+        .header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+        .badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 8px; font-size: 11px; font-weight: 600;
+            color: var(--accent); background: var(--accent-dim);
+            border-radius: 100px; letter-spacing: 0.01em; white-space: nowrap;
+        }
+        .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+        .icon-btn {
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            border: none; border-radius: var(--radius-sm); background: transparent;
+            color: var(--text-muted); cursor: pointer; transition: background 0.12s, color 0.12s;
+        }
+        .icon-btn:hover { background: var(--card-hover); color: var(--text-secondary); }
+        .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus); }
+        .icon-btn svg { width: 15px; height: 15px; }
+
+        /* ── Layer List ── */
+        .layer-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .layer-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .layer-row:hover { background: var(--card-hover); }
+        .layer-row.active {
+            background: var(--accent-dim);
+            border-color: var(--accent-border);
+        }
+        .layer-row.layer-hidden { opacity: 0.45; }
+        .layer-eye {
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            flex-shrink: 0;
+            padding: 0;
+            transition: color 0.12s;
+        }
+        .layer-eye:hover { color: var(--text); }
+        .layer-eye svg { width: 14px; height: 14px; }
+        .layer-row.layer-hidden .layer-eye {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+        .layer-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .layer-swatch.line-swatch {
+            width: 14px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .layer-swatch.border-swatch {
+            background: transparent;
+            border-radius: 2px;
+        }
+        .layer-name {
+            flex: 1;
+            font: 500 12px/1.35 'Inter', sans-serif;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .layer-row.active .layer-name {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .divider { height: 1px; background: var(--border); margin: 0 16px; flex-shrink: 0; }
+        .content { padding: 16px; }
+        .section { margin-bottom: 20px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; overflow: hidden; }
+        .section-title {
+            font-size: 11px; font-weight: 600; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+        }
+        .section-header .section-title { margin-bottom: 0; }
+        .section-header .section-select { max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; }
+
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton {
+            border-color: transparent;
+            background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-to) 50%, var(--skeleton-from) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s infinite;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── Stat Cards ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            padding: 12px;
+            border-radius: var(--radius-md);
+            background: var(--card);
+            border: 1px solid var(--border);
+            transition: background 0.12s;
+        }
+        .stat-card:hover { background: var(--card-hover); }
+        .stat-card.skeleton {
+            min-height: 68px;
+            border-color: transparent;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.25;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.01em;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* ── Time Slider ── */
+        .time-controls { padding: 12px 0; }
+        .time-display {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .button-group { display: flex; gap: 6px; }
+        .control-btn {
+            padding: 8px 14px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .control-btn:hover { background: var(--card-hover); border-color: var(--border-strong); }
+        .control-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+        .slider-container { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .slider-label { font-size: 12px; color: var(--text-muted); min-width: 40px; font-weight: 500; }
+        .time-slider {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--bg-secondary);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .time-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--accent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ── Bar Chart ── */
+        .bar-chart { display: flex; flex-direction: column; gap: 6px; }
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            padding: 2px 0;
+            transition: background 0.1s;
+        }
+        .bar-row:hover { background: var(--card-hover); }
+        .bar-row.dimmed { opacity: 0.35; }
+        .bar-label {
+            min-width: 80px;
+            max-width: 100px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .bar-track {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bar-value {
+            min-width: 40px;
+            text-align: right;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Histogram ── */
+        .histogram-wrap { position: relative; }
+        .histogram {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 64px;
+        }
+        .hist-bar {
+            flex: 1;
+            border-radius: 2px 2px 0 0;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.12s;
+        }
+        .hist-bar:hover { opacity: 1; }
+        .hist-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+        .hist-tooltip {
+            position: absolute; top: -6px; left: 50%;
+            transform: translate(-50%, -100%);
+            padding: 5px 9px; border-radius: var(--radius-sm);
+            background: var(--text); color: var(--pane-bg-opaque);
+            font-size: 11px; font-weight: 500; white-space: nowrap;
+            pointer-events: none; opacity: 0; transition: opacity 0.12s;
+            z-index: 5; font-variant-numeric: tabular-nums;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        }
+        .hist-tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            border: 4px solid transparent; border-top-color: var(--text);
+        }
+        .hist-tooltip.visible { opacity: 1; }
+        .hist-filter-hint {
+            font-size: 10px; color: var(--text-muted); text-align: center;
+            margin-top: 2px; opacity: 0; transition: opacity 0.15s;
+        }
+        .hist-filter-hint.visible { opacity: 1; }
+
+
+        /* ── Legend ── */
+        .legend-section { margin-bottom: 12px; }
+        .legend-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+        }
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .legend-swatch.line {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .legend-swatch.circle {
+            border-radius: 50%;
+        }
+        .legend-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* ── Detail Panel ── */
+        .detail-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-top: 8px;
+            animation: fadeIn 0.15s ease;
+        }
+        .detail-header {
+            padding: 10px 12px;
+            background: var(--accent-dim);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .detail-rows { padding: 2px 0; }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-key { color: var(--text-muted); font-weight: 500; }
+        .detail-val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; max-width: 55%; word-break: break-word; }
+
+        /* ── Attribute Picker ── */
+        .section-select {
+            padding: 3px 22px 3px 8px;
+            font: 500 11px/1.4 'Inter', sans-serif;
+            color: var(--text-secondary);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            appearance: none;
+            cursor: pointer;
+            max-width: 50%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' fill='%238892A5' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            transition: border-color 0.12s;
+        }
+        .section-select:focus { outline: none; border-color: var(--accent); }
+
+        /* ── Neighborhood Filter Banner ── */
+        .nbhd-filter-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin: 12px 16px 0;
+            padding: 6px 10px;
+            background: var(--accent-dim);
+            border: 1px solid var(--accent-border);
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--accent);
+            animation: fadeIn 0.15s ease;
+        }
+        .nbhd-filter-clear {
+            border: none;
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0 2px;
+            opacity: 0.7;
+            transition: opacity 0.12s;
+        }
+        .nbhd-filter-clear:hover { opacity: 1; }
+
+        /* ── Compare Section ── */
+        .compare-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .compare-controls select {
+            flex: 1;
+            padding: 5px 24px 5px 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font: 500 11px/1.4 'Inter', sans-serif;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' fill='%238892A5' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            transition: border-color 0.12s;
+            min-width: 0;
+        }
+        .compare-controls select:focus { outline: none; border-color: var(--accent); }
+        .compare-vs {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-top: 10px;
+            animation: fadeIn 0.15s ease;
+        }
+        .compare-col {
+            background: var(--card);
+            padding: 10px;
+        }
+        .compare-col-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .compare-stat {
+            margin-bottom: 6px;
+        }
+        .compare-stat:last-child { margin-bottom: 0; }
+        .compare-stat-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        .compare-stat-label {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .compare-stat-value.highlight {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .pane { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: 100%; height: 50vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+            #map { bottom: 50vh; }
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="pane" id="pane">
+    <div class="header">
+        <div class="header-row">
+            <div>
+                <h1 id="title">Loading&hellip;</h1>
+                <div class="meta" id="subtitle"></div>
+            </div>
+            <div class="header-actions">
+                <span class="badge" id="feature-count" style="display:none">
+                    <span id="count-label">--</span>
+                </span>
+                <button class="icon-btn" id="theme-toggle" title="Toggle theme" aria-label="Toggle light/dark theme">
+                    <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="display:none">
+                        <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                    </svg>
+                    <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="layer-list" id="layer-list"></div>
+    </div>
+    <div class="nbhd-filter-banner" id="nbhd-filter" style="display:none">
+        <span id="nbhd-filter-label">Filtered: —</span>
+        <button class="nbhd-filter-clear" id="nbhd-filter-clear">&times;</button>
+    </div>
+    <div class="divider"></div>
+    <div class="pane-scroll">
+        <div class="content" id="content">
+            <!-- Compare Neighborhoods -->
+            <div class="section" id="compare-section">
+                <div class="section-title">Compare Neighborhoods</div>
+                <div class="compare-controls">
+                    <select id="compare-a"><option value="">Select...</option></select>
+                    <span class="compare-vs">vs</span>
+                    <select id="compare-b"><option value="">Select...</option></select>
+                </div>
+                <div id="compare-results"></div>
+            </div>
+
+            <!-- Stat Cards -->
+            <div class="stat-grid" id="stats">
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+            </div>
+
+            <!-- Time Slider -->
+            <div class="section" id="time-section">
+                <div class="section-title">Development Timeline</div>
+                <div class="time-controls">
+                    <div class="time-display" id="time-display">&mdash;</div>
+                    <div class="controls">
+                        <div class="slider-container">
+                            <span class="slider-label" id="slider-min">&mdash;</span>
+                            <input type="range" id="time-slider" class="time-slider" min="0" max="0" value="0">
+                            <span class="slider-label" id="slider-max">&mdash;</span>
+                        </div>
+                        <div class="button-group">
+                            <button class="control-btn" id="back-btn">&larr;</button>
+                            <button class="control-btn" id="play-btn">&#9654;</button>
+                            <button class="control-btn" id="forward-btn">&rarr;</button>
+                            <button class="control-btn" id="reset-btn" title="Show all">&#8635;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="section" id="bar-section" style="display:none">
+                <div class="section-header">
+                    <div class="section-title" id="bar-title">By Category</div>
+                    <select class="section-select" id="bar-attr-select"></select>
+                </div>
+                <div class="bar-chart" id="bar-chart"></div>
+            </div>
+
+            <!-- Histogram -->
+            <div class="section" id="hist-section" style="display:none">
+                <div class="section-header">
+                    <div class="section-title" id="hist-title">Distribution</div>
+                    <select class="section-select" id="hist-attr-select"></select>
+                </div>
+                <div class="histogram-wrap">
+                    <div class="hist-tooltip" id="hist-tooltip"></div>
+                    <div class="histogram" id="histogram"></div>
+                </div>
+                <div class="hist-labels" id="hist-labels"></div>
+                <div class="hist-filter-hint" id="hist-filter-hint">Filtering map to this range</div>
+            </div>
+
+            <!-- Legend -->
+            <div class="section" id="legend-section">
+                <div class="section-title">Legend</div>
+                <div id="legend-container"></div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div class="section" id="detail-section" style="display:none">
+                <div class="section-title">Feature Details</div>
+                <div id="detail-panel"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+
+    const CONFIG = {
+        mapId: "xGcqILF9CSY9BmxRNCmcCmuA",
+        theme: "dark",
+        title: null,
+    };
+
+    const DATA_LAYER_IDS = ["1h9AzivLORLm9BxCe6wJpHaA", "MHAXrr9C7RGu47qQ9BPTgLmD"];
+    const CONTEXT_LAYER_IDS = ["HXDP6cu3QzGI73P3YVsc9BD", "Sqt3M4ZxTVOWplSRExsTGA", "Tm0mFKc7Sjm3LvqzKm8Z0B"];
+
+    const LAYER_COLORS = {
+        "1h9AzivLORLm9BxCe6wJpHaA": "#5cbcd6",  // Residential - teal
+        "MHAXrr9C7RGu47qQ9BPTgLmD": "#c9a327",  // Commercial - gold
+        "HXDP6cu3QzGI73P3YVsc9BD": "#ffffff",     // Stations - white
+        "Sqt3M4ZxTVOWplSRExsTGA": "#445aaa",      // Lines - blue
+        "Tm0mFKc7Sjm3LvqzKm8Z0B": "#cccccc",     // Neighborhoods - gray
+    };
+
+    const FALLBACK_COLORS = ["#5cbcd6", "#4aa8c2", "#3894ae", "#26809a", "#146c86"];
+
+    let felt, allLayers, activeLayerId, nameMap = {};
+    let currentPaintColors = null;
+    let activeFilter = null;
+    let activeNbhdFilter = null;
+    let compareMode = false;
+    let neighborhoodNames = [];
+    let lastBarAttrId = null;
+    let lastHistAttrId = null;
+
+    // ── Color utilities ──
+
+    function hexToHSL(hex) {
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        if (max === min) { h = s = 0; }
+        else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return { h: h * 360, s, l };
+    }
+
+    function luminance(hex) {
+        hex = hex.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const toLinear = c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    }
+
+    function contrastRatio(hex1, hex2) {
+        const l1 = luminance(hex1), l2 = luminance(hex2);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+
+    function darkenHex(hex, amount) {
+        hex = hex.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substring(0, 2), 16) - amount);
+        const g = Math.max(0, parseInt(hex.substring(2, 4), 16) - amount);
+        const b = Math.max(0, parseInt(hex.substring(4, 6), 16) - amount);
+        return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    }
+
+    function lerpColor(colors, t) {
+        if (!colors || colors.length < 2) return colors?.[0] || '#6366f1';
+        const i = Math.min(Math.floor(t * (colors.length - 1)), colors.length - 2);
+        const f = t * (colors.length - 1) - i;
+        const parse = c => [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+        const [r1,g1,b1] = parse(colors[i]), [r2,g2,b2] = parse(colors[i + 1]);
+        const hex = v => Math.round(v).toString(16).padStart(2,'0');
+        return `#${hex(r1+f*(r2-r1))}${hex(g1+f*(g2-g1))}${hex(b1+f*(b2-b1))}`;
+    }
+
+    function formatValue(val) {
+        if (val == null) return '\u2014';
+        if (typeof val === 'number') return val.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        return String(val);
+    }
+
+    // ── Theme engine ──
+
+    function deriveTheme(accentHex, isDark) {
+        const root = document.documentElement;
+        const vars = ['--pane-bg','--pane-bg-opaque','--pane-shine','--bg-secondary',
+            '--card','--card-hover','--border','--border-strong',
+            '--text','--text-secondary','--text-muted',
+            '--skeleton-from','--skeleton-to','--pane-shadow','--shadow-sm','--shadow-md'];
+        vars.forEach(v => root.style.removeProperty(v));
+
+        if (isDark) root.setAttribute('data-theme', 'dark');
+        else root.removeAttribute('data-theme');
+
+        if (!accentHex) return;
+
+        let accent = accentHex;
+        if (!isDark) {
+            while (contrastRatio(accent, '#FFFFFF') < 3 && accent !== '#000000') {
+                accent = darkenHex(accent, 20);
+            }
+        }
+
+        root.style.setProperty('--accent', accent);
+        const hc = accent.replace('#', '');
+        const r = parseInt(hc.substring(0, 2), 16);
+        const g = parseInt(hc.substring(2, 4), 16);
+        const b = parseInt(hc.substring(4, 6), 16);
+        root.style.setProperty('--accent-dim', `rgba(${r},${g},${b},${isDark ? 0.14 : 0.08})`);
+        root.style.setProperty('--accent-border', `rgba(${r},${g},${b},${isDark ? 0.28 : 0.20})`);
+
+        if (!isDark) {
+            const { h } = hexToHSL(accentHex);
+            const isWarm = (h >= 0 && h <= 60) || h >= 300;
+            if (isWarm) {
+                root.style.setProperty('--pane-bg', 'rgba(255, 252, 247, 0.85)');
+                root.style.setProperty('--bg-secondary', 'rgba(254, 247, 237, 0.5)');
+                root.style.setProperty('--card', 'rgba(255, 253, 250, 0.5)');
+            }
+        }
+    }
+
+    function initThemeToggle() {
+        const btn = document.getElementById('theme-toggle');
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+        function update() {
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            iconSun.style.display = isDark ? 'block' : 'none';
+            iconMoon.style.display = isDark ? 'none' : 'block';
+        }
+        btn.addEventListener('click', () => {
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            deriveTheme(accent || '#5cbcd6', !isDark);
+            update();
+        });
+        update();
+    }
+
+    // ── Schema helpers ──
+
+    function classifyAttrs(schema) {
+        const numeric = [], category = [], datetime = [], text = [];
+        const skipIds = /^(OBJECTID|GLOBALID|ADDRESS_NUMBER|OBJECTID_1)$/i;
+        for (const a of schema.attributes) {
+            if (skipIds.test(a.id)) continue;
+            const t = (a.type || '').toLowerCase();
+            if (['number','numeric','float','integer','double'].includes(t)) {
+                if (!a.id.endsWith('_at') && !a.id.endsWith('_ts')) numeric.push(a);
+            }
+            else if (t === 'datetime' || t === 'date') datetime.push(a);
+            else if (t === 'string' || t === 'text') { category.push(a); text.push(a); }
+        }
+        return { numeric, category, datetime, text };
+    }
+
+    // ── Stat Cards ──
+
+    async function loadStatCards(layerId) {
+        const el = document.getElementById("stats");
+        try {
+            const calls = [
+                felt.getAggregates({ layerId, aggregation: { methods: ["count"] } }),
+                felt.getAggregates({ layerId, aggregation: { methods: ["avg", "max"], attribute: "VALUATION" } }),
+                felt.getAggregates({ layerId, aggregation: { methods: ["avg"], attribute: "PERMIT_FEE" } })
+            ];
+            const results = await Promise.allSettled(calls);
+            const countR = results[0].status === "fulfilled" ? results[0].value : {};
+            const valR = results[1].status === "fulfilled" ? results[1].value : {};
+            const feeR = results[2].status === "fulfilled" ? results[2].value : {};
+
+            const cards = [
+                { label: "Total Permits", value: countR.count != null ? countR.count.toLocaleString() : "\u2014" },
+                { label: "Max Cost", value: valR.max != null ? "$" + valR.max.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "\u2014" },
+                { label: "Avg Cost", value: valR.avg != null ? "$" + valR.avg.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "\u2014" },
+                { label: "Avg Permit Fee", value: feeR.avg != null ? "$" + feeR.avg.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "\u2014" }
+            ];
+
+            el.innerHTML = cards.map(s =>
+                `<div class="stat-card">
+                    <div class="stat-value">${s.value}</div>
+                    <div class="stat-label">${s.label}</div>
+                </div>`
+            ).join("");
+
+            return countR.count;
+        } catch (e) {
+            el.innerHTML = `<div class="stat-card" style="grid-column:1/-1;text-align:center;color:var(--text-muted)">Could not load statistics</div>`;
+            return null;
+        }
+    }
+
+    // ── Time Slider ──
+
+    async function initTimeSlider(layerId, datetimeAttr) {
+        if (!datetimeAttr) return;
+
+        let playing = false;
+        let currentFrame = 0;
+        let timeSteps = [];
+        const stepCount = 10;
+        const playbackSpeed = 1500;
+
+        const result = await felt.getFeatures({ layerId, pageSize: 500 });
+        const dates = (result.features || [])
+            .map(f => f.properties[datetimeAttr])
+            .filter(Boolean)
+            .map(d => new Date(d).getTime())
+            .filter(t => !isNaN(t))
+            .sort((a, b) => a - b);
+
+        if (dates.length < 2) return;
+
+        const minDate = new Date(dates[0]);
+        const maxDate = new Date(dates[dates.length - 1]);
+        const interval = (maxDate - minDate) / stepCount;
+
+        for (let i = 0; i < stepCount; i++) {
+            const start = new Date(minDate.getTime() + interval * i);
+            const end = new Date(minDate.getTime() + interval * (i + 1));
+            const label = `${start.toLocaleDateString()} \u2013 ${end.toLocaleDateString()}`;
+            timeSteps.push({
+                name: label,
+                minTime: start.toISOString(),
+                maxTime: end.toISOString()
+            });
+        }
+
+        const slider = document.getElementById("time-slider");
+        slider.max = timeSteps.length - 1;
+        document.getElementById("slider-min").textContent = minDate.getFullYear();
+        document.getElementById("slider-max").textContent = maxDate.getFullYear();
+
+        async function updateDisplay() {
+            if (timeSteps.length === 0) return;
+            const step = timeSteps[currentFrame];
+            document.getElementById("time-display").textContent = step.name;
+            slider.value = currentFrame;
+
+            const filter = [
+                [datetimeAttr, "ge", step.minTime],
+                "and",
+                [datetimeAttr, "le", step.maxTime]
+            ];
+            await felt.setLayerFilters({ layerId, filters: filter });
+        }
+
+        function togglePlay() {
+            playing = !playing;
+            document.getElementById("play-btn").classList.toggle("active", playing);
+            if (playing) playLoop();
+        }
+
+        async function resetFilter() {
+            playing = false;
+            currentFrame = 0;
+            slider.value = 0;
+            document.getElementById("play-btn").classList.remove("active");
+            document.getElementById("time-display").textContent = "All dates";
+            await felt.setLayerFilters({ layerId, filters: null });
+        }
+
+        async function playLoop() {
+            if (!playing) return;
+            if (currentFrame < timeSteps.length - 1) {
+                currentFrame++;
+                await updateDisplay();
+                setTimeout(playLoop, playbackSpeed);
+            } else {
+                await resetFilter();
+            }
+        }
+
+        // Remove old listeners by replacing elements
+        const playBtn = document.getElementById("play-btn");
+        const backBtn = document.getElementById("back-btn");
+        const fwdBtn = document.getElementById("forward-btn");
+        const resetBtn = document.getElementById("reset-btn");
+
+        const newPlay = playBtn.cloneNode(true);
+        const newBack = backBtn.cloneNode(true);
+        const newFwd = fwdBtn.cloneNode(true);
+        const newReset = resetBtn.cloneNode(true);
+        const newSlider = slider.cloneNode(true);
+
+        playBtn.replaceWith(newPlay);
+        backBtn.replaceWith(newBack);
+        fwdBtn.replaceWith(newFwd);
+        resetBtn.replaceWith(newReset);
+        slider.replaceWith(newSlider);
+
+        newPlay.addEventListener("click", togglePlay);
+        newBack.addEventListener("click", () => {
+            if (currentFrame > 0) { currentFrame--; playing = false; updateDisplay(); }
+        });
+        newFwd.addEventListener("click", () => {
+            if (currentFrame < timeSteps.length - 1) { currentFrame++; playing = false; updateDisplay(); }
+        });
+        newReset.addEventListener("click", resetFilter);
+        newSlider.addEventListener("input", () => {
+            currentFrame = Number(newSlider.value);
+            playing = false;
+            updateDisplay();
+        });
+
+        document.getElementById("time-display").textContent = "All dates";
+    }
+
+    // ── Bar Chart ──
+
+    async function loadBarChart(attrId) {
+        const el = document.getElementById("bar-chart");
+        const section = document.getElementById("bar-section");
+
+        if (!attrId) { section.style.display = "none"; return false; }
+
+        try {
+            const data = await felt.getCategoryData({ layerId: activeLayerId, attribute: attrId });
+            if (!data || data.length === 0) { section.style.display = "none"; return false; }
+            const maxVal = Math.max(...data.map(c => c.value));
+            if (data.length > 30 || maxVal <= 1) { section.style.display = "none"; return false; }
+
+            section.style.display = "";
+            const displayName = nameMap[attrId] || attrId;
+            document.getElementById("bar-title").textContent = `By ${displayName}`;
+
+            const max = Math.max(...data.map(c => c.value));
+            const sliced = data.slice(0, 8);
+            const layerColor = LAYER_COLORS[activeLayerId] || "#6366f1";
+
+            el.innerHTML = sliced.map(cat => {
+                const pct = (cat.value / max) * 100;
+                const opacity = 0.45 + (pct / 180);
+                return `<div class="bar-row" data-cat="${(cat.key || "").replace(/"/g, "&quot;")}">
+                    <div class="bar-label" title="${cat.key || "Unknown"}">${cat.key || "Unknown"}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${pct}%;background:${layerColor};opacity:${opacity};"></div>
+                    </div>
+                    <div class="bar-value">${cat.value.toLocaleString()}</div>
+                </div>`;
+            }).join("");
+
+            // Wire hover-to-filter
+            const rows = el.querySelectorAll(".bar-row");
+            rows.forEach(row => {
+                row.addEventListener("mouseenter", () => {
+                    rows.forEach(r => r.classList.toggle("dimmed", r !== row));
+                    highlightOnMap(attrId, row.dataset.cat, "category");
+                });
+                row.addEventListener("mouseleave", () => {
+                    rows.forEach(r => r.classList.remove("dimmed"));
+                    clearHighlight();
+                });
+            });
+            return true;
+        } catch (e) {
+            section.style.display = "none";
+            return false;
+        }
+    }
+
+    // ── Histogram ──
+
+    async function loadHistogram(attrId) {
+        const el = document.getElementById("histogram");
+        const section = document.getElementById("hist-section");
+        const labelsEl = document.getElementById("hist-labels");
+
+        if (!attrId) { section.style.display = "none"; return; }
+
+        try {
+            const bins = await felt.getHistogramData({
+                layerId: activeLayerId,
+                attribute: attrId,
+                steps: { type: "equal-intervals", count: 10 }
+            });
+            if (!bins || bins.length === 0) { section.style.display = "none"; return; }
+
+            section.style.display = "";
+            const displayName = nameMap[attrId] || attrId;
+            document.getElementById("hist-title").textContent = `${displayName} Distribution`;
+            const max = Math.max(...bins.map(b => b.value));
+            const layerColor = LAYER_COLORS[activeLayerId] || "#6366f1";
+
+            el.innerHTML = bins.map((bin, i) => {
+                const pct = max > 0 ? (bin.value / max) * 100 : 0;
+                const opacity = 0.5 + (i / bins.length) * 0.5;
+                return `<div class="hist-bar" data-min="${bin.min}" data-max="${bin.max}" style="height:${Math.max(pct, 2)}%;background:${layerColor};opacity:${opacity};" title="${bin.min.toFixed(1)} \u2013 ${bin.max.toFixed(1)}: ${bin.value.toLocaleString()}"></div>`;
+            }).join("");
+
+            // Wire hover-to-filter with tooltip
+            const bars = el.querySelectorAll(".hist-bar");
+            const tooltip = document.getElementById("hist-tooltip");
+            const hint = document.getElementById("hist-filter-hint");
+            bars.forEach(bar => {
+                bar.addEventListener("mouseenter", () => {
+                    bars.forEach(b => { if (b !== bar) b.style.opacity = "0.3"; });
+                    const min = parseFloat(bar.dataset.min);
+                    const max = parseFloat(bar.dataset.max);
+                    if (tooltip) {
+                        const wrapRect = el.parentElement.getBoundingClientRect();
+                        const barRect = bar.getBoundingClientRect();
+                        tooltip.style.left = (barRect.left - wrapRect.left + barRect.width / 2) + 'px';
+                        tooltip.textContent = `$${min.toLocaleString(undefined, {maximumFractionDigits:0})} \u2013 $${max.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+                        tooltip.classList.add('visible');
+                    }
+                    if (hint) hint.classList.add('visible');
+                    highlightOnMap(attrId, { min, max }, "range");
+                });
+                bar.addEventListener("mouseleave", () => {
+                    bars.forEach(b => b.style.opacity = "");
+                    if (tooltip) tooltip.classList.remove('visible');
+                    if (hint) hint.classList.remove('visible');
+                    clearHighlight();
+                });
+            });
+
+            if (labelsEl) {
+                labelsEl.innerHTML = `<span>$${bins[0].min.toLocaleString(undefined,{maximumFractionDigits:0})}</span><span>$${bins[bins.length - 1].max.toLocaleString(undefined,{maximumFractionDigits:0})}</span>`;
+            }
+        } catch (e) {
+            section.style.display = "none";
+        }
+    }
+
+    // ── Hover-to-filter ──
+
+    async function highlightOnMap(attrId, value, type) {
+        try {
+            let filter;
+            if (type === "category") {
+                filter = [attrId, "eq", value];
+            } else if (type === "range") {
+                filter = [[attrId, "ge", value.min], "and", [attrId, "lt", value.max]];
+            }
+            await felt.setLayerFilters({ layerId: activeLayerId, filters: filter });
+            activeFilter = true;
+        } catch (e) {
+            console.warn("Filter failed:", e);
+        }
+    }
+
+    async function clearHighlight() {
+        if (!activeFilter) return;
+        try {
+            await felt.setLayerFilters({ layerId: activeLayerId, filters: null });
+            activeFilter = null;
+        } catch (e) {}
+    }
+
+    // ── Layer List ──
+
+    const EYE_OPEN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>`;
+    const EYE_CLOSED = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/></svg>`;
+
+    function initLayerList(layersToShow, onLayerChange) {
+        const container = document.getElementById("layer-list");
+
+        container.innerHTML = layersToShow.map(l => {
+            const color = LAYER_COLORS[l.id] || "#888";
+            const isData = DATA_LAYER_IDS.includes(l.id);
+            const isLine = l.id === "Sqt3M4ZxTVOWplSRExsTGA";
+            const isBorder = l.id === "Tm0mFKc7Sjm3LvqzKm8Z0B";
+            let swatchClass = "layer-swatch";
+            let swatchStyle = `background:${color};`;
+            if (isLine) { swatchClass += " line-swatch"; }
+            if (isBorder) { swatchClass += " border-swatch"; swatchStyle = `border:1.5px solid ${color};`; }
+            return `<div class="layer-row${isData ? '' : ''}" data-layer-id="${l.id}" data-is-data="${isData}">
+                <button class="layer-eye" data-layer-id="${l.id}" title="Toggle visibility">${EYE_OPEN}</button>
+                <span class="${swatchClass}" style="${swatchStyle}"></span>
+                <span class="layer-name">${l.name || "Untitled Layer"}</span>
+            </div>`;
+        }).join("");
+
+        // Click row → activate layer (data layers only)
+        container.querySelectorAll(".layer-row").forEach(row => {
+            row.addEventListener("click", (e) => {
+                if (e.target.closest(".layer-eye")) return;
+                if (row.dataset.isData !== "true") return;
+                container.querySelectorAll(".layer-row").forEach(r =>
+                    r.classList.toggle("active", r === row)
+                );
+                onLayerChange(row.dataset.layerId);
+            });
+        });
+
+        // Click eye → toggle visibility
+        container.querySelectorAll(".layer-eye").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const layerId = btn.dataset.layerId;
+                const row = btn.closest(".layer-row");
+                const isHidden = row.classList.toggle("layer-hidden");
+                btn.innerHTML = isHidden ? EYE_CLOSED : EYE_OPEN;
+                try {
+                    await felt.setLayerVisibility(
+                        isHidden ? { hide: [layerId] } : { show: [layerId] }
+                    );
+                } catch (err) {}
+            });
+        });
+
+        // Activate first data layer
+        const firstDataRow = container.querySelector('.layer-row[data-is-data="true"]');
+        if (firstDataRow) firstDataRow.classList.add("active");
+    }
+
+    // ── Legend ──
+
+    function buildLegend() {
+        const container = document.getElementById("legend-container");
+        const entries = [
+            { id: "1h9AzivLORLm9BxCe6wJpHaA", name: "Residential Permits", color: LAYER_COLORS["1h9AzivLORLm9BxCe6wJpHaA"], shape: "circle" },
+            { id: "MHAXrr9C7RGu47qQ9BPTgLmD", name: "Commercial Permits", color: LAYER_COLORS["MHAXrr9C7RGu47qQ9BPTgLmD"], shape: "circle" },
+            { id: "HXDP6cu3QzGI73P3YVsc9BD", name: "Transit Stations", color: LAYER_COLORS["HXDP6cu3QzGI73P3YVsc9BD"], shape: "circle" },
+            { id: "Sqt3M4ZxTVOWplSRExsTGA", name: "Transit Lines", color: LAYER_COLORS["Sqt3M4ZxTVOWplSRExsTGA"], shape: "line" },
+            { id: "Tm0mFKc7Sjm3LvqzKm8Z0B", name: "Neighborhoods", color: LAYER_COLORS["Tm0mFKc7Sjm3LvqzKm8Z0B"], shape: "square" },
+        ];
+
+        container.innerHTML = `<div class="legend-row" style="flex-direction:column;gap:6px;">
+            ${entries.map(e => {
+                const shapeClass = e.shape === "line" ? "line" : e.shape === "circle" ? "circle" : "";
+                const border = e.id === "Tm0mFKc7Sjm3LvqzKm8Z0B" ? "border:1px solid " + e.color + ";" : "";
+                const bg = e.id === "Tm0mFKc7Sjm3LvqzKm8Z0B" ? "background:transparent;" : "background:" + e.color + ";";
+                return `<div class="legend-item">
+                    <div class="legend-swatch ${shapeClass}" style="${bg}${border}"></div>
+                    <div class="legend-label">${e.name}</div>
+                </div>`;
+            }).join("")}
+        </div>`;
+    }
+
+    // ── Detail Panel ──
+
+    function renderDetailPanel(properties, title) {
+        const section = document.getElementById("detail-section");
+        const panel = document.getElementById("detail-panel");
+        section.style.display = "";
+
+        let rows = "";
+        for (const [key, value] of Object.entries(properties)) {
+            const label = nameMap[key] || key;
+            let display;
+            if (value == null) display = "\u2014";
+            else if (typeof value === "number") display = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            else display = String(value);
+            rows += `<div class="detail-row"><span class="detail-key">${label}</span><span class="detail-val">${display}</span></div>`;
+        }
+
+        panel.innerHTML = `<div class="detail-panel">
+            <div class="detail-header">${title}</div>
+            <div class="detail-rows">${rows}</div>
+        </div>`;
+    }
+
+    // ── Attribute Pickers ──
+
+    function initBarAttrPicker(attrs) {
+        const select = document.getElementById("bar-attr-select");
+        // Filter to text attrs with reasonable cardinality for bar chart
+        const eligible = attrs.filter(a => {
+            const skip = /^(PERMIT_NUM|ADDRESS|GLOBALID|SCHEDNUM|LOG_NUM|BID_AUTHNAME|DATE_CO_ISSUED|CONTRACTOR_NAME|ADDRESS_STREETNAME|ADDRESS_UNIT|ADDRESS_UNITTYPE|ADDRESS_STREETTYPE|ADDRESS_STREETDIR|STAT_CODE_1|STAT_CODE_2|STAT_CODE_3|NEIGHBORHOOD|LOCATION)$/i;
+            return !skip.test(a.id);
+        });
+        if (eligible.length <= 1) {
+            select.style.display = "none";
+            return;
+        }
+        select.style.display = "";
+        select.innerHTML = eligible.map(a =>
+            `<option value="${a.id}">${a.displayName || a.id}</option>`
+        ).join("");
+        select.addEventListener("change", () => { lastBarAttrId = select.value; loadBarChart(select.value); });
+    }
+
+    function initHistAttrPicker(attrs) {
+        const select = document.getElementById("hist-attr-select");
+        if (attrs.length <= 1) {
+            select.style.display = "none";
+            return;
+        }
+        select.style.display = "";
+        select.innerHTML = attrs.map(a =>
+            `<option value="${a.id}">${a.displayName || a.id}</option>`
+        ).join("");
+        select.addEventListener("change", () => { lastHistAttrId = select.value; loadHistogram(select.value); });
+    }
+
+    // ── Neighborhood Filter ──
+
+    async function filterByNeighborhood(name) {
+        activeNbhdFilter = name;
+        compareMode = false;
+        document.getElementById("compare-a").value = "";
+        document.getElementById("compare-b").value = "";
+        document.getElementById("compare-results").innerHTML = "";
+
+        // Show banner
+        const banner = document.getElementById("nbhd-filter");
+        document.getElementById("nbhd-filter-label").textContent = `Filtered: ${name}`;
+        banner.style.display = "";
+
+        // Filter data layer on map
+        await felt.setLayerFilters({ layerId: activeLayerId, filters: ["NEIGHBORHOOD", "eq", name] });
+
+        // Fetch filtered features and compute stats client-side
+        await reloadFilteredBlocks([name]);
+    }
+
+    async function clearNeighborhoodFilter() {
+        activeNbhdFilter = null;
+        compareMode = false;
+        document.getElementById("nbhd-filter").style.display = "none";
+        document.getElementById("compare-a").value = "";
+        document.getElementById("compare-b").value = "";
+        document.getElementById("compare-results").innerHTML = "";
+
+        await felt.setLayerFilters({ layerId: activeLayerId, filters: null });
+        // Reload with SDK aggregates (unfiltered)
+        await loadStatCards(activeLayerId);
+        if (lastBarAttrId) await loadBarChart(lastBarAttrId);
+        if (lastHistAttrId) await loadHistogram(lastHistAttrId);
+
+        // Restore badge to full count
+        const schema = await felt.getLayerSchema(activeLayerId);
+        document.getElementById("count-label").textContent = `${schema.featureCount.toLocaleString()} permits`;
+    }
+
+    async function fetchFilteredFeatures() {
+        let allFeatures = [];
+        let cursor = null;
+        for (let page = 0; page < 40; page++) {
+            const opts = { layerId: activeLayerId, pageSize: 500 };
+            if (cursor) opts.cursor = cursor;
+            const result = await felt.getFeatures(opts);
+            allFeatures = allFeatures.concat(result.features || []);
+            cursor = result.nextCursor;
+            if (!cursor) break;
+        }
+        return allFeatures;
+    }
+
+    async function reloadFilteredBlocks(nbhdNames) {
+        // Fetch features matching the filter
+        const features = await fetchFilteredFeatures();
+        const filtered = features.filter(f => nbhdNames.includes(f.properties.NEIGHBORHOOD));
+
+        // Stat cards from client-side data
+        renderFilteredStatCards(filtered);
+
+        // Bar chart from client-side data
+        if (lastBarAttrId) renderFilteredBarChart(filtered, lastBarAttrId);
+
+        // Histogram from client-side data
+        if (lastHistAttrId) renderFilteredHistogram(filtered, lastHistAttrId);
+
+        // Update badge
+        document.getElementById("count-label").textContent = `${filtered.length.toLocaleString()} permits`;
+    }
+
+    function renderFilteredStatCards(features) {
+        const el = document.getElementById("stats");
+        const stats = computeStats(features);
+        const fmt = v => "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        el.innerHTML = [
+            { label: "Total Permits", value: stats.count.toLocaleString() },
+            { label: "Total Cost", value: fmt(stats.totalVal) },
+            { label: "Avg Cost", value: fmt(stats.avgVal) },
+            { label: "Avg Permit Fee", value: fmt(stats.avgFee) }
+        ].map(s => `<div class="stat-card"><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join("");
+    }
+
+    function renderFilteredBarChart(features, attrId) {
+        const el = document.getElementById("bar-chart");
+        const section = document.getElementById("bar-section");
+        const displayName = nameMap[attrId] || attrId;
+
+        // Count categories
+        const counts = {};
+        for (const f of features) {
+            const val = f.properties[attrId];
+            if (val != null && val !== "") counts[val] = (counts[val] || 0) + 1;
+        }
+        const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+        if (sorted.length === 0) { section.style.display = "none"; return; }
+
+        section.style.display = "";
+        document.getElementById("bar-title").textContent = `By ${displayName}`;
+        const max = sorted[0][1];
+        const layerColor = LAYER_COLORS[activeLayerId] || "#6366f1";
+
+        el.innerHTML = sorted.map(([key, value]) => {
+            const pct = (value / max) * 100;
+            const opacity = 0.45 + (pct / 180);
+            return `<div class="bar-row" data-cat="${key.replace(/"/g, "&quot;")}">
+                <div class="bar-label" title="${key}">${key}</div>
+                <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${layerColor};opacity:${opacity};"></div></div>
+                <div class="bar-value">${value.toLocaleString()}</div>
+            </div>`;
+        }).join("");
+    }
+
+    function renderFilteredHistogram(features, attrId) {
+        const el = document.getElementById("histogram");
+        const section = document.getElementById("hist-section");
+        const labelsEl = document.getElementById("hist-labels");
+        const displayName = nameMap[attrId] || attrId;
+
+        const values = features.map(f => f.properties[attrId]).filter(v => typeof v === "number" && !isNaN(v));
+        if (values.length === 0) { section.style.display = "none"; return; }
+
+        section.style.display = "";
+        document.getElementById("hist-title").textContent = `${displayName} Distribution`;
+
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binCount = 10;
+        const binWidth = (max - min) / binCount || 1;
+
+        const bins = Array.from({ length: binCount }, (_, i) => ({
+            min: min + binWidth * i,
+            max: min + binWidth * (i + 1),
+            count: 0
+        }));
+        for (const v of values) {
+            const idx = Math.min(Math.floor((v - min) / binWidth), binCount - 1);
+            bins[idx].count++;
+        }
+
+        const maxCount = Math.max(...bins.map(b => b.count));
+        const layerColor = LAYER_COLORS[activeLayerId] || "#6366f1";
+
+        el.innerHTML = bins.map((bin, i) => {
+            const pct = maxCount > 0 ? (bin.count / maxCount) * 100 : 0;
+            const opacity = 0.5 + (i / binCount) * 0.5;
+            return `<div class="hist-bar" style="height:${Math.max(pct, 2)}%;background:${layerColor};opacity:${opacity};" title="${bin.min.toFixed(0)} – ${bin.max.toFixed(0)}: ${bin.count}"></div>`;
+        }).join("");
+
+        const fmt = v => "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        if (labelsEl) labelsEl.innerHTML = `<span>${fmt(min)}</span><span>${fmt(max)}</span>`;
+    }
+
+    // ── Compare Neighborhoods ──
+
+    async function loadNeighborhoodNames() {
+        const result = await felt.getFeatures({ layerId: "Tm0mFKc7Sjm3LvqzKm8Z0B", pageSize: 100 });
+        const names = (result.features || [])
+            .map(f => f.properties.NBHD_NAME)
+            .filter(Boolean)
+            .sort();
+        neighborhoodNames = [...new Set(names)];
+
+        const optionsHtml = `<option value="">Select...</option>` +
+            neighborhoodNames.map(n => `<option value="${n}">${n}</option>`).join("");
+        document.getElementById("compare-a").innerHTML = optionsHtml;
+        document.getElementById("compare-b").innerHTML = optionsHtml;
+    }
+
+    function initCompare() {
+        const selA = document.getElementById("compare-a");
+        const selB = document.getElementById("compare-b");
+
+        async function onCompareChange() {
+            const a = selA.value;
+            const b = selB.value;
+            if (!a || !b || a === b) {
+                if (compareMode) {
+                    compareMode = false;
+                    document.getElementById("compare-results").innerHTML = "";
+                    document.getElementById("nbhd-filter").style.display = "none";
+                    await felt.setLayerFilters({ layerId: activeLayerId, filters: null });
+                    await reloadBlocks();
+                }
+                return;
+            }
+            await runCompare(a, b);
+        }
+
+        selA.addEventListener("change", onCompareChange);
+        selB.addEventListener("change", onCompareChange);
+    }
+
+    async function runCompare(nameA, nameB) {
+        compareMode = true;
+        activeNbhdFilter = null;
+
+        // Show banner
+        const banner = document.getElementById("nbhd-filter");
+        document.getElementById("nbhd-filter-label").textContent = `Comparing: ${nameA} vs ${nameB}`;
+        banner.style.display = "";
+
+        // Filter to both neighborhoods on map
+        const filter = [["NEIGHBORHOOD", "eq", nameA], "or", ["NEIGHBORHOOD", "eq", nameB]];
+        await felt.setLayerFilters({ layerId: activeLayerId, filters: filter });
+
+        // Fetch features and compute stats
+        const allFeatures = await fetchFilteredFeatures();
+        const featuresA = allFeatures.filter(f => f.properties.NEIGHBORHOOD === nameA);
+        const featuresB = allFeatures.filter(f => f.properties.NEIGHBORHOOD === nameB);
+        const combined = [...featuresA, ...featuresB];
+
+        // Render filtered stat cards and charts for combined data
+        renderFilteredStatCards(combined);
+        if (lastBarAttrId) renderFilteredBarChart(combined, lastBarAttrId);
+        if (lastHistAttrId) renderFilteredHistogram(combined, lastHistAttrId);
+        document.getElementById("count-label").textContent = `${combined.length.toLocaleString()} permits`;
+
+        // Render side-by-side comparison
+        renderCompare(nameA, computeStats(featuresA), nameB, computeStats(featuresB));
+    }
+
+    function computeStats(features) {
+        const count = features.length;
+        let totalVal = 0, totalFee = 0, valCount = 0, feeCount = 0;
+        for (const f of features) {
+            const v = f.properties.VALUATION;
+            const fee = f.properties.PERMIT_FEE;
+            if (typeof v === "number" && !isNaN(v)) { totalVal += v; valCount++; }
+            if (typeof fee === "number" && !isNaN(fee)) { totalFee += fee; feeCount++; }
+        }
+        return {
+            count,
+            totalVal,
+            avgVal: valCount > 0 ? totalVal / valCount : 0,
+            avgFee: feeCount > 0 ? totalFee / feeCount : 0
+        };
+    }
+
+    function renderCompare(nameA, statsA, nameB, statsB) {
+        const container = document.getElementById("compare-results");
+        const fmt = (v) => "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+        // Determine which has higher count for highlighting
+        const hA = statsA.count >= statsB.count;
+
+        container.innerHTML = `<div class="compare-grid">
+            <div class="compare-col">
+                <div class="compare-col-header" title="${nameA}">${nameA}</div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value ${hA ? 'highlight' : ''}">${statsA.count.toLocaleString()}</div>
+                    <div class="compare-stat-label">Permits</div>
+                </div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value ${statsA.totalVal >= statsB.totalVal ? 'highlight' : ''}">${fmt(statsA.totalVal)}</div>
+                    <div class="compare-stat-label">Total Cost</div>
+                </div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value ${statsA.avgVal >= statsB.avgVal ? 'highlight' : ''}">${fmt(statsA.avgVal)}</div>
+                    <div class="compare-stat-label">Avg Cost</div>
+                </div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value">${fmt(statsA.avgFee)}</div>
+                    <div class="compare-stat-label">Avg Fee</div>
+                </div>
+            </div>
+            <div class="compare-col">
+                <div class="compare-col-header" title="${nameB}">${nameB}</div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value ${!hA ? 'highlight' : ''}">${statsB.count.toLocaleString()}</div>
+                    <div class="compare-stat-label">Permits</div>
+                </div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value ${statsB.totalVal > statsA.totalVal ? 'highlight' : ''}">${fmt(statsB.totalVal)}</div>
+                    <div class="compare-stat-label">Total Cost</div>
+                </div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value ${statsB.avgVal > statsA.avgVal ? 'highlight' : ''}">${fmt(statsB.avgVal)}</div>
+                    <div class="compare-stat-label">Avg Cost</div>
+                </div>
+                <div class="compare-stat">
+                    <div class="compare-stat-value">${fmt(statsB.avgFee)}</div>
+                    <div class="compare-stat-label">Avg Fee</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // ── Init ──
+
+    async function init() {
+        initThemeToggle();
+
+        felt = await Felt.embed(document.getElementById('map'), CONFIG.mapId, {
+            uiControls: { showLegend: false, cooperativeGestures: false }
+        });
+
+        const details = await felt.getMapDetails();
+        const title = CONFIG.title || details.title || 'Dashboard';
+        document.getElementById('title').textContent = title;
+        document.title = title;
+
+        allLayers = await felt.getLayers();
+        const dataLayers = DATA_LAYER_IDS.map(id => allLayers.find(l => l.id === id)).filter(Boolean);
+
+        if (dataLayers.length === 0) {
+            document.getElementById('content').innerHTML = '<div class="empty-state">No data layers found on this map.</div>';
+            return;
+        }
+
+        document.getElementById('subtitle').textContent = 'Denver building permits near transit';
+
+        // Set accent from first layer color
+        const accentHex = LAYER_COLORS[dataLayers[0].id] || '#5cbcd6';
+        const isDark = CONFIG.theme === 'dark';
+        deriveTheme(accentHex, isDark);
+        document.getElementById('icon-sun').style.display = isDark ? 'block' : 'none';
+        document.getElementById('icon-moon').style.display = isDark ? 'none' : 'block';
+
+        // Layer list (all layers: data + context)
+        const allVisibleLayers = [...DATA_LAYER_IDS, ...CONTEXT_LAYER_IDS]
+            .map(id => allLayers.find(l => l.id === id)).filter(Boolean);
+        initLayerList(allVisibleLayers, async (layerId) => {
+            await activateLayer(layerId);
+        });
+        buildLegend();
+
+        // Click-to-detail + neighborhood filter
+        felt.onPointerClick({
+            handler: (e) => {
+                if (!e.features?.length) {
+                    document.getElementById("detail-section").style.display = "none";
+                    document.getElementById("detail-panel").innerHTML = "";
+                    return;
+                }
+                const feature = e.features[0];
+                const layerForFeature = allLayers.find(l => l.id === feature.layerId);
+
+                // If clicked a neighborhood polygon, filter permits
+                if (feature.layerId === "Tm0mFKc7Sjm3LvqzKm8Z0B") {
+                    const nbhdName = feature.properties.NBHD_NAME;
+                    if (nbhdName) filterByNeighborhood(nbhdName);
+                    return;
+                }
+
+                const displayTitle = layerForFeature?.name || "Feature Details";
+                renderDetailPanel(feature.properties, displayTitle);
+            }
+        });
+
+        // Clear filter banner button
+        document.getElementById("nbhd-filter-clear").addEventListener("click", () => {
+            clearNeighborhoodFilter();
+        });
+
+        // Load neighborhood names for compare dropdowns
+        await loadNeighborhoodNames();
+        initCompare();
+
+        await activateLayer(dataLayers[0].id);
+    }
+
+    async function activateLayer(layerId) {
+        // Clear filters on all data layers
+        for (const id of DATA_LAYER_IDS) {
+            try { await felt.setLayerFilters({ layerId: id, filters: null }); } catch (e) {}
+        }
+
+        activeLayerId = layerId;
+        const layer = allLayers.find(l => l.id === layerId);
+        currentPaintColors = FALLBACK_COLORS;
+
+        // Update accent color based on active layer
+        const accentHex = LAYER_COLORS[layerId] || '#5cbcd6';
+        const isDark = document.documentElement.hasAttribute('data-theme');
+        deriveTheme(accentHex, isDark);
+
+        const schema = await felt.getLayerSchema(layerId);
+        nameMap = {};
+        schema.attributes.forEach(a => { nameMap[a.id] = a.displayName || a.id; });
+
+        const classified = classifyAttrs(schema);
+
+        // Feature count badge
+        const countBadge = document.getElementById('feature-count');
+        const countLabel = document.getElementById('count-label');
+        countBadge.style.display = '';
+        countLabel.textContent = `${schema.featureCount.toLocaleString()} permits`;
+
+        // Load all data blocks
+        await loadStatCards(layerId);
+
+        // Time slider
+        const dateAttr = classified.datetime.find(a => a.id === "DATE_ISSUED") || classified.datetime[0];
+        if (dateAttr) {
+            await initTimeSlider(layerId, dateAttr.id);
+        }
+
+        // Bar chart - find text attrs with reasonable cardinality
+        const barAttrs = classified.text.filter(a => {
+            const skip = /^(PERMIT_NUM|ADDRESS|GLOBALID|SCHEDNUM|LOG_NUM|BID_AUTHNAME|DATE_CO_ISSUED|CONTRACTOR_NAME|ADDRESS_STREETNAME|ADDRESS_UNIT|ADDRESS_UNITTYPE|ADDRESS_STREETTYPE|ADDRESS_STREETDIR|STAT_CODE_1|STAT_CODE_2|STAT_CODE_3|NEIGHBORHOOD|LOCATION)$/i;
+            return !skip.test(a.id);
+        });
+        lastBarAttrId = barAttrs.find(a => a.id === "CLASS")?.id || barAttrs[0]?.id || classified.text[0]?.id;
+        initBarAttrPicker(classified.text);
+        await loadBarChart(lastBarAttrId);
+
+        // Histogram
+        const numericAttrs = classified.numeric.filter(a => !(/^(OBJECTID|ADDRESS_NUMBER)$/i.test(a.id)));
+        lastHistAttrId = numericAttrs.find(a => a.id === "VALUATION")?.id || numericAttrs[0]?.id;
+        initHistAttrPicker(numericAttrs);
+        await loadHistogram(lastHistAttrId);
+
+        // Re-apply neighborhood filter if active
+        if (activeNbhdFilter) {
+            await filterByNeighborhood(activeNbhdFilter);
+        } else if (compareMode) {
+            const a = document.getElementById("compare-a").value;
+            const b = document.getElementById("compare-b").value;
+            if (a && b && a !== b) await runCompare(a, b);
+        }
+    }
+
+    init().catch(err => {
+        console.error("SDK failed:", err);
+        document.getElementById("map").innerHTML =
+            `<p style="padding:40px;color:#6b7280;">Could not load. <a href="https://felt.com/map/${CONFIG.mapId}" target="_blank" style="color:#5cbcd6;">View on Felt</a></p>`;
+    });
+</script>
+</body>
+</html>

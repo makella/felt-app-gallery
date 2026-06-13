@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Earthquakes — USGS M4.5+</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --accent: #6366f1;
+            --accent-dim: rgba(99, 102, 241, 0.10);
+            --accent-border: rgba(99, 102, 241, 0.25);
+
+            --pane-bg: rgba(255, 255, 255, 0.82);
+            --pane-bg-opaque: #FFFFFF;
+            --pane-shine: transparent;
+            --bg-secondary: #F0F2F4;
+            --card: rgba(255, 255, 255, 0.6);
+            --card-hover: rgba(0, 0, 0, 0.03);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-strong: rgba(0, 0, 0, 0.12);
+            --text: #16191D;
+            --text-secondary: #586274;
+            --text-muted: #8892A5;
+            --focus: rgba(243, 63, 117, 0.4);
+
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 16px;
+
+            --pane-shadow:
+                0 0 0 1px rgba(0, 0, 0, 0.04),
+                0 0 1px rgba(24, 39, 75, 0.12),
+                0 2px 4px rgba(24, 39, 75, 0.06),
+                0 4px 8px rgba(24, 39, 75, 0.06),
+                0 8px 24px rgba(24, 39, 75, 0.08);
+            --shadow-sm: 0 0 1px rgba(24, 39, 75, 0.18);
+            --shadow-md: 0 0 1px rgba(24, 39, 75, 0.12), 0 2px 4px rgba(24, 39, 75, 0.06);
+
+            --skeleton-from: rgba(0, 0, 0, 0.04);
+            --skeleton-to: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] {
+            --pane-bg: rgba(17, 17, 17, 0.85);
+            --pane-bg-opaque: #111111;
+            --pane-shine: rgba(255, 255, 255, 0.06);
+            --bg-secondary: rgba(255, 255, 255, 0.04);
+            --card: rgba(255, 255, 255, 0.04);
+            --card-hover: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.14);
+            --text: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.38);
+            --focus: rgba(243, 63, 117, 0.5);
+
+            --pane-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.06),
+                0 0 1px rgba(0, 0, 0, 0.5),
+                0 4px 8px rgba(0, 0, 0, 0.25),
+                0 12px 32px rgba(0, 0, 0, 0.3);
+            --shadow-sm: 0 0 1px rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 0 1px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+
+            --skeleton-from: rgba(255, 255, 255, 0.04);
+            --skeleton-to: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 13px; line-height: 1.5;
+            height: 100vh; overflow: hidden;
+            background: #000; color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #map { position: absolute; inset: 0; z-index: 0; }
+
+        .pane {
+            position: absolute; top: 16px; right: 16px; bottom: 16px;
+            width: 380px; max-width: calc(100vw - 32px); z-index: 10;
+            display: flex; flex-direction: column;
+            background: var(--pane-bg);
+            -webkit-backdrop-filter: blur(12px) saturate(1.4);
+            backdrop-filter: blur(12px) saturate(1.4);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--pane-shadow);
+            border: 1px solid var(--pane-shine);
+            overflow: hidden;
+        }
+        .pane-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .pane-scroll::-webkit-scrollbar { width: 5px; }
+        .pane-scroll::-webkit-scrollbar-track { background: transparent; }
+        .pane-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+        .header { padding: 20px 16px 16px; flex-shrink: 0; }
+        .header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .header h1 { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.35; letter-spacing: -0.01em; }
+        .header .meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 400; }
+        .header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+        .badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 8px; font-size: 11px; font-weight: 600;
+            color: var(--accent); background: var(--accent-dim);
+            border-radius: 100px; letter-spacing: 0.01em; white-space: nowrap;
+        }
+        .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+        .icon-btn {
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            border: none; border-radius: var(--radius-sm); background: transparent;
+            color: var(--text-muted); cursor: pointer; transition: background 0.12s, color 0.12s;
+        }
+        .icon-btn:hover { background: var(--card-hover); color: var(--text-secondary); }
+        .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus); }
+        .icon-btn svg { width: 15px; height: 15px; }
+
+        .divider { height: 1px; background: var(--border); margin: 0 16px; flex-shrink: 0; }
+        .content { padding: 16px; }
+        .section { margin-bottom: 20px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; overflow: hidden; }
+        .section-title {
+            font-size: 11px; font-weight: 600; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px;
+        }
+        .section-header .section-title { margin-bottom: 0; }
+        .section-header .section-select { max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .section-select {
+            padding: 3px 22px 3px 8px;
+            font: 500 11px/1.4 'Inter', sans-serif;
+            color: var(--text-secondary);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            appearance: none;
+            cursor: pointer;
+            max-width: 50%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' fill='%238892A5' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            transition: border-color 0.12s;
+        }
+        .section-select:focus { outline: none; border-color: var(--accent); }
+
+        .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; }
+
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton {
+            border-color: transparent;
+            background: linear-gradient(90deg, var(--skeleton-from) 25%, var(--skeleton-to) 50%, var(--skeleton-from) 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s infinite;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ── stat-cards ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            padding: 12px;
+            border-radius: var(--radius-md);
+            background: var(--card);
+            border: 1px solid var(--border);
+            transition: background 0.12s;
+        }
+        .stat-card:hover { background: var(--card-hover); }
+        .stat-card.skeleton { min-height: 68px; }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.25;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.01em;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* ── histogram ── */
+        .histogram-wrap { position: relative; }
+        .histogram {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+            height: 64px;
+        }
+        .hist-bar {
+            flex: 1;
+            border-radius: 2px 2px 0 0;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.12s;
+        }
+        .hist-bar:hover { opacity: 1; }
+        .hist-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+        .hist-tooltip {
+            position: absolute; top: -6px; left: 50%;
+            transform: translate(-50%, -100%);
+            padding: 5px 9px; border-radius: var(--radius-sm);
+            background: var(--text); color: var(--pane-bg-opaque);
+            font-size: 11px; font-weight: 500; white-space: nowrap;
+            pointer-events: none; opacity: 0; transition: opacity 0.12s;
+            z-index: 5; font-variant-numeric: tabular-nums;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        }
+        .hist-tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+            border: 4px solid transparent; border-top-color: var(--text);
+        }
+        .hist-tooltip.visible { opacity: 1; }
+        .hist-filter-hint {
+            font-size: 10px; color: var(--text-muted); text-align: center;
+            margin-top: 2px; opacity: 0; transition: opacity 0.15s;
+        }
+        .hist-filter-hint.visible { opacity: 1; }
+
+        /* ── filter controls shared ── */
+        .filter-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+
+        /* ── category filter (custom for magType) ── */
+        .cat-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            user-select: none;
+        }
+        .cat-checkbox input[type="checkbox"] {
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .cat-checkbox .cat-count {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── range slider ── */
+        .range-slider-group { margin-bottom: 14px; }
+        .range-slider-wrap {
+            position: relative;
+            height: 20px;
+            margin: 8px 0 4px;
+        }
+        .range-thumb {
+            position: absolute;
+            width: 100%;
+            height: 0;
+            top: 8px;
+            pointer-events: none;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            outline: none;
+            z-index: 2;
+        }
+        .range-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            pointer-events: auto;
+            border: 2px solid white;
+            box-shadow: var(--shadow-sm);
+        }
+        .range-track {
+            position: absolute;
+            top: 8px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--bg-secondary);
+            border-radius: 2px;
+            z-index: 1;
+        }
+        .range-track-fill {
+            position: absolute;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            opacity: 0.5;
+        }
+        .range-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── text search ── */
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 13px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text);
+            font-family: inherit;
+            transition: border-color 0.12s;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+        .search-input::placeholder { color: var(--text-muted); }
+
+        /* ── time slider ── */
+        .time-controls { padding: 4px 0 0; }
+        .time-display {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: -0.01em;
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .button-group { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .control-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .control-btn:hover { background: var(--card-hover); border-color: var(--border-strong); }
+        .control-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+        .slider-container { display: flex; align-items: center; gap: 10px; width: 100%; }
+        .slider-label { font-size: 11px; color: var(--text-muted); min-width: 48px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .time-slider {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--bg-secondary);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .time-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--accent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* ── ranked-list (simple top N) ── */
+        .rank-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.12s, transform 0.12s;
+            margin-bottom: 2px;
+            border: 1px solid transparent;
+        }
+        .rank-item:hover { background: var(--card-hover); border-color: var(--border); transform: translateX(2px); }
+        .rank-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            min-width: 18px;
+            font-variant-numeric: tabular-nums;
+        }
+        .rank-mag {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 36px;
+            font-variant-numeric: tabular-nums;
+        }
+        .rank-place {
+            font-size: 12px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        /* ── legend ── */
+        .legend-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+        .legend-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+            transition: opacity 0.15s;
+        }
+        .legend-item:hover { background: var(--card-hover); }
+        .legend-item.hidden { opacity: 0.35; }
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .legend-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* ── detail panel ── */
+        .detail-panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-top: 8px;
+            animation: fadeIn 0.15s ease;
+        }
+        .detail-header {
+            padding: 10px 12px;
+            background: var(--accent-dim);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .detail-rows { padding: 2px 0; }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-key { color: var(--text-muted); font-weight: 500; flex-shrink: 0; }
+        .detail-val {
+            color: var(--text);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        .detail-val a { color: var(--accent); text-decoration: none; }
+        .detail-val a:hover { text-decoration: underline; }
+
+        /* ── hover tooltip ── */
+        .hover-tooltip {
+            position: fixed;
+            z-index: 100;
+            padding: 6px 10px;
+            background: var(--pane-bg-opaque);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            font-size: 12px;
+            color: var(--text);
+            pointer-events: none;
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+        }
+        .hover-tooltip .tooltip-label {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .hover-tooltip .tooltip-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .pane { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: 100%; height: 55vh; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+            #map { bottom: 55vh; }
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<div id="hover-tooltip" class="hover-tooltip" style="display:none"></div>
+
+<div class="pane" id="pane">
+    <div class="header">
+        <div class="header-row">
+            <div>
+                <h1 id="title">Loading&hellip;</h1>
+                <div class="meta" id="subtitle"></div>
+            </div>
+            <div class="header-actions">
+                <span class="badge" id="feature-count" style="display:none">
+                    <span id="count-label">--</span>
+                </span>
+                <button class="icon-btn" id="theme-toggle" title="Toggle theme" aria-label="Toggle light/dark theme">
+                    <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="display:none">
+                        <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                    </svg>
+                    <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="pane-scroll">
+        <div class="content" id="content">
+
+            <!-- Stat cards -->
+            <div class="stat-grid" id="stats">
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+                <div class="stat-card skeleton"></div>
+            </div>
+
+            <!-- Histogram + attribute picker -->
+            <div class="section" id="hist-section">
+                <div class="section-header">
+                    <div class="section-title" id="hist-title">Distribution</div>
+                    <select class="section-select" id="hist-attr-select"></select>
+                </div>
+                <div class="histogram-wrap">
+                    <div class="hist-tooltip" id="hist-tooltip"></div>
+                    <div class="histogram" id="histogram"></div>
+                </div>
+                <div class="hist-labels" id="hist-labels"></div>
+                <div class="hist-filter-hint" id="hist-filter-hint">Filtering map to this range</div>
+            </div>
+
+            <!-- Magnitude range slider -->
+            <div class="section">
+                <div class="range-slider-group">
+                    <span class="filter-label" id="slider-range-label">Magnitude Range</span>
+                    <div class="range-slider-wrap">
+                        <input type="range" class="range-thumb range-thumb--min" id="range-thumb-min" min="0" max="100" value="0">
+                        <input type="range" class="range-thumb range-thumb--max" id="range-thumb-max" min="0" max="100" value="100">
+                        <div class="range-track">
+                            <div class="range-track-fill" id="range-track-fill"></div>
+                        </div>
+                    </div>
+                    <div class="range-slider-labels">
+                        <span id="range-slider-min-label">0</span>
+                        <span id="range-slider-max-label">100</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Magnitude type category filter -->
+            <div class="section">
+                <div class="section-title">Magnitude Type</div>
+                <div id="magtype-container"></div>
+            </div>
+
+            <!-- Text search -->
+            <div class="section">
+                <span class="filter-label">Search place</span>
+                <input type="text" class="search-input" id="search-input" placeholder="e.g. Japan, Chile, Alaska...">
+            </div>
+
+            <!-- Time slider -->
+            <div class="section">
+                <div class="section-title">Time</div>
+                <div class="time-controls">
+                    <div class="time-display" id="time-display">All dates</div>
+                    <div class="controls">
+                        <div class="slider-container">
+                            <span class="slider-label" id="slider-min">&mdash;</span>
+                            <input type="range" id="time-slider" class="time-slider" min="0" max="0" value="0">
+                            <span class="slider-label" id="slider-max">&mdash;</span>
+                        </div>
+                        <div class="button-group">
+                            <button class="control-btn" id="back-btn" title="Step back">&larr;</button>
+                            <button class="control-btn" id="play-btn" title="Play">&#9654;</button>
+                            <button class="control-btn" id="forward-btn" title="Step forward">&rarr;</button>
+                            <button class="control-btn" id="reset-btn" title="Show all">&#8635;</button>
+                            <button class="control-btn" id="fit-btn" title="Fit to data">Fit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="section" id="legend-section">
+                <div class="section-title">Legend</div>
+                <div id="legend-container"></div>
+            </div>
+
+            <!-- Top 10 largest -->
+            <div class="section">
+                <div class="section-title">Top 10 Largest</div>
+                <div id="top-quakes-container"></div>
+            </div>
+
+            <!-- Detail panel -->
+            <div id="detail-panel"></div>
+
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+
+    const CONFIG = {
+        mapId: "wZ24aiD4S8iIEFZExpGTUC",
+        theme: "light",
+        title: null,
+    };
+
+    const FALLBACK_COLORS = ["#fde68a","#fcd34d","#fbbf24","#f59e0b","#ea580c","#dc2626","#991b1b"];
+
+    let felt, allLayers, activeLayerId;
+    let nameMap = {};
+    let currentPaintColors = null;
+    let mapStyledAttr = null;
+
+    // Filter state — each control fills a slot; applyFilters combines them with AND.
+    const filterState = { magType: null, mag: null, time: null, place: null };
+    let savedFilterState = null; // for hover-to-filter on histogram
+
+    // ── Color utilities ──
+    function hexToHSL(hex) {
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        if (max === min) { h = s = 0; }
+        else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return { h: h * 360, s, l };
+    }
+    function luminance(hex) {
+        hex = hex.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+        const toLinear = c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    }
+    function contrastRatio(hex1, hex2) {
+        const l1 = luminance(hex1), l2 = luminance(hex2);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+    function darkenHex(hex, amount) {
+        hex = hex.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substring(0, 2), 16) - amount);
+        const g = Math.max(0, parseInt(hex.substring(2, 4), 16) - amount);
+        const b = Math.max(0, parseInt(hex.substring(4, 6), 16) - amount);
+        return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    }
+    function lerpColor(colors, t) {
+        if (!colors || colors.length < 2) return colors?.[0] || '#6366f1';
+        const i = Math.min(Math.floor(t * (colors.length - 1)), colors.length - 2);
+        const f = t * (colors.length - 1) - i;
+        const parse = c => [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+        const [r1,g1,b1] = parse(colors[i]), [r2,g2,b2] = parse(colors[i + 1]);
+        const hex = v => Math.round(v).toString(16).padStart(2,'0');
+        return `#${hex(r1+f*(r2-r1))}${hex(g1+f*(g2-g1))}${hex(b1+f*(b2-b1))}`;
+    }
+
+    // ── Theme engine ──
+    function deriveTheme(accentHex, isDark) {
+        const root = document.documentElement;
+        const vars = ['--pane-bg','--pane-bg-opaque','--pane-shine','--bg-secondary',
+            '--card','--card-hover','--border','--border-strong',
+            '--text','--text-secondary','--text-muted',
+            '--skeleton-from','--skeleton-to','--pane-shadow','--shadow-sm','--shadow-md'];
+        vars.forEach(v => root.style.removeProperty(v));
+
+        if (isDark) root.setAttribute('data-theme', 'dark');
+        else root.removeAttribute('data-theme');
+
+        if (!accentHex) return;
+
+        let accent = accentHex;
+        if (!isDark) {
+            while (contrastRatio(accent, '#FFFFFF') < 3 && accent !== '#000000') {
+                accent = darkenHex(accent, 20);
+            }
+        }
+
+        root.style.setProperty('--accent', accent);
+        const hc = accent.replace('#', '');
+        const r = parseInt(hc.substring(0, 2), 16);
+        const g = parseInt(hc.substring(2, 4), 16);
+        const b = parseInt(hc.substring(4, 6), 16);
+        root.style.setProperty('--accent-dim', `rgba(${r},${g},${b},${isDark ? 0.14 : 0.08})`);
+        root.style.setProperty('--accent-border', `rgba(${r},${g},${b},${isDark ? 0.28 : 0.20})`);
+    }
+
+    function initThemeToggle() {
+        const btn = document.getElementById('theme-toggle');
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+        function update() {
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            iconSun.style.display = isDark ? 'block' : 'none';
+            iconMoon.style.display = isDark ? 'none' : 'block';
+        }
+        btn.addEventListener('click', () => {
+            const isDark = document.documentElement.hasAttribute('data-theme');
+            const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            deriveTheme(accent || '#6366f1', !isDark);
+            update();
+        });
+        update();
+    }
+
+    // ── Filter combining ──
+    function combineAnd(parts) {
+        const valid = parts.filter(p => p != null);
+        if (valid.length === 0) return null;
+        if (valid.length === 1) return valid[0];
+        let f = valid[0];
+        for (let i = 1; i < valid.length; i++) f = [f, "and", valid[i]];
+        return f;
+    }
+
+    async function applyFilters() {
+        const combined = combineAnd([
+            filterState.magType,
+            filterState.mag,
+            filterState.time,
+            filterState.place,
+        ]);
+        try {
+            await felt.setLayerFilters({ layerId: activeLayerId, filters: combined });
+        } catch (e) {
+            console.warn("Filter apply failed:", e);
+        }
+    }
+
+    // ── Detail panel ──
+    function renderDetailPanel(properties, title) {
+        const panel = document.getElementById("detail-panel");
+
+        // Custom field ordering & display for earthquakes
+        const order = ["title", "mag", "magType", "place", "time", "felt", "cdi", "mmi", "sig", "tsunami", "net", "status", "url"];
+        const showFields = new Set(order);
+
+        let rows = "";
+        const seen = new Set();
+        const entries = [];
+
+        order.forEach(key => {
+            if (properties[key] !== undefined) {
+                entries.push([key, properties[key]]);
+                seen.add(key);
+            }
+        });
+
+        for (const [key, value] of entries) {
+            const label = nameMap[key] || key;
+            let display;
+            if (value == null || value === "") {
+                display = "\u2014";
+            } else if (key === "time" || key === "updated") {
+                // unix ms → local string
+                const d = new Date(Number(value));
+                display = isNaN(d) ? String(value) : d.toLocaleString();
+            } else if (key === "url" || key === "detail") {
+                const href = String(value);
+                display = `<a href="${href}" target="_blank" rel="noopener">USGS page &rarr;</a>`;
+            } else if (key === "tsunami") {
+                display = Number(value) === 1 ? "Yes" : "No";
+            } else if (typeof value === "number") {
+                display = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+            } else {
+                display = String(value);
+            }
+            rows += `<div class="detail-row"><span class="detail-key">${label}</span><span class="detail-val">${display}</span></div>`;
+        }
+
+        panel.innerHTML = `<div class="detail-panel">
+            <div class="detail-header">${title}</div>
+            <div class="detail-rows">${rows}</div>
+        </div>`;
+    }
+
+    // ── Stat cards ──
+    async function loadStatCards(layerId) {
+        const el = document.getElementById("stats");
+        try {
+            const [countRes, magRes, tsuRes] = await Promise.all([
+                felt.getAggregates({ layerId, aggregation: { methods: ["count"] } }),
+                felt.getAggregates({ layerId, aggregation: { methods: ["avg", "max"], attribute: "mag" } }),
+                felt.getAggregates({ layerId, aggregation: { methods: ["sum"], attribute: "tsunami" } })
+            ]);
+
+            const total = countRes.count ?? 0;
+            const avgMag = magRes.avg ?? null;
+            const maxMag = magRes.max ?? null;
+            const tsuCount = tsuRes.sum ?? 0;
+
+            const cards = [
+                { label: "Events (M4.5+)", value: total.toLocaleString() },
+                { label: "Max Magnitude", value: maxMag != null ? `M ${maxMag.toFixed(1)}` : "\u2014" },
+                { label: "Avg Magnitude", value: avgMag != null ? `M ${avgMag.toFixed(2)}` : "\u2014" },
+                { label: "Tsunami Events", value: tsuCount.toLocaleString() }
+            ];
+
+            el.innerHTML = cards.map(s =>
+                `<div class="stat-card">
+                    <div class="stat-value">${s.value}</div>
+                    <div class="stat-label">${s.label}</div>
+                </div>`
+            ).join("");
+        } catch (e) {
+            console.warn("Stats failed:", e);
+            el.innerHTML = `<div style="grid-column:1/-1;color:var(--text-muted);font-size:12px;">Could not load statistics</div>`;
+        }
+    }
+
+    // ── Histogram ──
+    async function loadHistogram(attrId) {
+        const section = document.getElementById("hist-section");
+        const el = document.getElementById("histogram");
+        const labelsEl = document.getElementById("hist-labels");
+        const titleEl = document.getElementById("hist-title");
+        const tooltipEl = document.getElementById("hist-tooltip");
+        const hintEl = document.getElementById("hist-filter-hint");
+
+        if (!attrId) { section.style.display = "none"; return; }
+
+        const useMapColors = (attrId === mapStyledAttr) && currentPaintColors?.length >= 2;
+        const paletteForHist = useMapColors ? currentPaintColors : FALLBACK_COLORS;
+
+        try {
+            const bins = await felt.getHistogramData({
+                layerId: activeLayerId,
+                attribute: attrId,
+                steps: { type: "equal-intervals", count: 10 }
+            });
+            if (!bins || bins.length === 0) {
+                el.innerHTML = `<div style="color:var(--text-muted);font-size:11px;padding:8px 0;">No data</div>`;
+                labelsEl.innerHTML = "";
+                return;
+            }
+
+            titleEl.textContent = `${nameMap[attrId] || attrId} distribution`;
+            const max = Math.max(...bins.map(b => b.value));
+
+            el.innerHTML = bins.map((bin, i) => {
+                const pct = max > 0 ? (bin.value / max) * 100 : 0;
+                const t = bins.length > 1 ? i / (bins.length - 1) : 0;
+                const color = lerpColor(paletteForHist, t);
+                return `<div class="hist-bar" data-min="${bin.min}" data-max="${bin.max}" style="height:${Math.max(pct, 2)}%;background:${color};" title="${bin.min.toFixed(1)} \u2013 ${bin.max.toFixed(1)}: ${bin.value.toLocaleString()}"></div>`;
+            }).join("");
+
+            // Hover-to-filter
+            const bars = el.querySelectorAll(".hist-bar");
+            bars.forEach(bar => {
+                bar.addEventListener("mouseenter", async () => {
+                    bars.forEach(b => { if (b !== bar) b.style.opacity = "0.3"; });
+                    const min = parseFloat(bar.dataset.min);
+                    const max = parseFloat(bar.dataset.max);
+                    const wrapRect = el.parentElement.getBoundingClientRect();
+                    const barRect = bar.getBoundingClientRect();
+                    tooltipEl.style.left = (barRect.left - wrapRect.left + barRect.width / 2) + 'px';
+                    tooltipEl.textContent = `${min.toFixed(1)} – ${max.toFixed(1)}`;
+                    tooltipEl.classList.add('visible');
+                    hintEl.classList.add('visible');
+
+                    // Save state & apply hover filter
+                    if (savedFilterState === null) savedFilterState = { ...filterState };
+                    const hoverFilter = [[attrId, "ge", min], "and", [attrId, "lt", max]];
+                    try {
+                        await felt.setLayerFilters({ layerId: activeLayerId, filters: hoverFilter });
+                    } catch (e) {}
+                });
+                bar.addEventListener("mouseleave", async () => {
+                    bars.forEach(b => b.style.opacity = "");
+                    tooltipEl.classList.remove('visible');
+                    hintEl.classList.remove('visible');
+                    if (savedFilterState !== null) {
+                        savedFilterState = null;
+                        await applyFilters();
+                    }
+                });
+            });
+
+            labelsEl.innerHTML = `<span>${bins[0].min.toFixed(1)}</span><span>${bins[bins.length - 1].max.toFixed(1)}</span>`;
+        } catch (e) {
+            console.warn("Histogram failed:", e);
+            el.innerHTML = `<div style="color:var(--text-muted);font-size:11px;padding:8px 0;">Could not load</div>`;
+        }
+    }
+
+    // ── Attribute picker ──
+    function initAttributePicker(selectId, attributes, onChange, defaultId) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = attributes.map(a =>
+            `<option value="${a.id}" ${a.id === defaultId ? "selected" : ""}>${a.displayName}</option>`
+        ).join("");
+        select.addEventListener("change", () => onChange(select.value));
+    }
+
+    // ── Magnitude range slider ──
+    async function initMagRangeSlider(layerId) {
+        const label = document.getElementById("slider-range-label");
+        const minThumb = document.getElementById("range-thumb-min");
+        const maxThumb = document.getElementById("range-thumb-max");
+        const fill = document.getElementById("range-track-fill");
+        const minLabel = document.getElementById("range-slider-min-label");
+        const maxLabel = document.getElementById("range-slider-max-label");
+
+        label.textContent = "Magnitude Range";
+
+        let dataMin = 4.5, dataMax = 7.5;
+        try {
+            const agg = await felt.getAggregates({
+                layerId,
+                aggregation: { methods: ["min", "max"], attribute: "mag" }
+            });
+            if (agg.min != null) dataMin = agg.min;
+            if (agg.max != null) dataMax = agg.max;
+        } catch (e) {}
+
+        // Use floats with step 0.1 for magnitude
+        minThumb.min = maxThumb.min = dataMin;
+        minThumb.max = maxThumb.max = dataMax;
+        minThumb.step = maxThumb.step = 0.1;
+        minThumb.value = dataMin;
+        maxThumb.value = dataMax;
+        minLabel.textContent = `M ${Number(dataMin).toFixed(1)}`;
+        maxLabel.textContent = `M ${Number(dataMax).toFixed(1)}`;
+
+        function updateFill() {
+            const min = Number(minThumb.min);
+            const max = Number(minThumb.max);
+            const range = max - min || 1;
+            const left = ((Number(minThumb.value) - min) / range) * 100;
+            const right = ((Number(maxThumb.value) - min) / range) * 100;
+            fill.style.left = left + "%";
+            fill.style.width = (right - left) + "%";
+        }
+
+        let debounceTimer;
+        function onSlide() {
+            if (Number(minThumb.value) > Number(maxThumb.value)) {
+                minThumb.value = maxThumb.value;
+            }
+            updateFill();
+            minLabel.textContent = `M ${Number(minThumb.value).toFixed(1)}`;
+            maxLabel.textContent = `M ${Number(maxThumb.value).toFixed(1)}`;
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                const lo = Number(minThumb.value);
+                const hi = Number(maxThumb.value);
+                if (lo > dataMin || hi < dataMax) {
+                    filterState.mag = [["mag", "ge", lo], "and", ["mag", "le", hi]];
+                } else {
+                    filterState.mag = null;
+                }
+                await applyFilters();
+            }, 200);
+        }
+
+        minThumb.addEventListener("input", onSlide);
+        maxThumb.addEventListener("input", onSlide);
+        updateFill();
+    }
+
+    // ── magType category filter (custom) ──
+    async function initMagTypeFilter(layerId) {
+        const container = document.getElementById("magtype-container");
+
+        // Discover unique magType values via features
+        let types = [];
+        try {
+            const res = await felt.getFeatures({ layerId, pageSize: 1000 });
+            const counts = {};
+            (res.features || []).forEach(f => {
+                const v = f.properties?.magType;
+                if (v != null && v !== "") counts[v] = (counts[v] || 0) + 1;
+            });
+            types = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        } catch (e) {
+            console.warn("Could not fetch magTypes:", e);
+        }
+
+        if (types.length === 0) {
+            container.innerHTML = `<div style="color:var(--text-muted);font-size:11px;">No categories</div>`;
+            return;
+        }
+
+        const selected = new Set(types.map(([v]) => v));
+
+        container.innerHTML = types.map(([v, c]) => `
+            <label class="cat-checkbox">
+                <input type="checkbox" checked data-val="${v}">
+                <span>${v}</span>
+                <span class="cat-count">${c}</span>
+            </label>
+        `).join("");
+
+        function rebuildFilter() {
+            if (selected.size === 0) {
+                // All unchecked → nothing shown: use impossible filter
+                filterState.magType = ["magType", "eq", "__none__"];
+                return;
+            }
+            if (selected.size === types.length) {
+                filterState.magType = null;
+                return;
+            }
+            const parts = [...selected].map(v => ["magType", "eq", v]);
+            let combined = parts[0];
+            for (let i = 1; i < parts.length; i++) combined = [combined, "or", parts[i]];
+            filterState.magType = combined;
+        }
+
+        container.querySelectorAll("input[type=checkbox]").forEach(cb => {
+            cb.addEventListener("change", async () => {
+                const v = cb.dataset.val;
+                if (cb.checked) selected.add(v); else selected.delete(v);
+                rebuildFilter();
+                await applyFilters();
+            });
+        });
+    }
+
+    // ── Text search ──
+    function initTextSearch(layerId) {
+        const input = document.getElementById("search-input");
+        let debounceTimer;
+        input.addEventListener("input", () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                const val = input.value.trim();
+                filterState.place = val ? ["place", "cn", val] : null;
+                await applyFilters();
+            }, 300);
+        });
+    }
+
+    // ── Time slider (works with unix ms INTEGER attr) ──
+    async function initTimeSlider(layerId) {
+        const display = document.getElementById("time-display");
+        const slider = document.getElementById("time-slider");
+        const sliderMin = document.getElementById("slider-min");
+        const sliderMax = document.getElementById("slider-max");
+        const playBtn = document.getElementById("play-btn");
+        const backBtn = document.getElementById("back-btn");
+        const forwardBtn = document.getElementById("forward-btn");
+        const resetBtn = document.getElementById("reset-btn");
+
+        // Use aggregates for min/max (attribute is INTEGER unix ms)
+        let minMs, maxMs;
+        try {
+            const agg = await felt.getAggregates({
+                layerId,
+                aggregation: { methods: ["min", "max"], attribute: "time" }
+            });
+            minMs = agg.min; maxMs = agg.max;
+        } catch (e) {
+            console.warn("Could not get time range:", e);
+            return;
+        }
+        if (minMs == null || maxMs == null || minMs === maxMs) return;
+
+        const minDate = new Date(minMs);
+        const maxDate = new Date(maxMs);
+        const stepCount = 12;
+        const interval = (maxMs - minMs) / stepCount;
+
+        const timeSteps = [];
+        for (let i = 0; i < stepCount; i++) {
+            const startMs = minMs + interval * i;
+            const endMs = i === stepCount - 1 ? maxMs : minMs + interval * (i + 1);
+            const s = new Date(startMs), e = new Date(endMs);
+            const fmt = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+            timeSteps.push({
+                label: `${fmt(s)} – ${fmt(e)}`,
+                startMs, endMs
+            });
+        }
+
+        slider.max = timeSteps.length - 1;
+        slider.value = 0;
+        sliderMin.textContent = minDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        sliderMax.textContent = maxDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+        let currentFrame = -1; // -1 = show all
+        let playing = false;
+
+        async function showFrame(idx) {
+            if (idx < 0) {
+                display.textContent = "All dates";
+                filterState.time = null;
+            } else {
+                const step = timeSteps[idx];
+                display.textContent = step.label;
+                // Attribute is INTEGER unix ms → filter with integers
+                filterState.time = [["time", "ge", Math.floor(step.startMs)], "and", ["time", "le", Math.ceil(step.endMs)]];
+            }
+            await applyFilters();
+        }
+
+        async function goTo(idx) {
+            currentFrame = idx;
+            slider.value = Math.max(0, idx);
+            await showFrame(idx);
+        }
+
+        slider.addEventListener("input", async () => {
+            playing = false;
+            playBtn.classList.remove("active");
+            await goTo(Number(slider.value));
+        });
+        backBtn.addEventListener("click", async () => {
+            playing = false;
+            playBtn.classList.remove("active");
+            if (currentFrame > 0) await goTo(currentFrame - 1);
+            else if (currentFrame === -1) await goTo(0);
+        });
+        forwardBtn.addEventListener("click", async () => {
+            playing = false;
+            playBtn.classList.remove("active");
+            if (currentFrame < timeSteps.length - 1) await goTo(currentFrame + 1);
+        });
+        resetBtn.addEventListener("click", async () => {
+            playing = false;
+            playBtn.classList.remove("active");
+            slider.value = 0;
+            await goTo(-1);
+        });
+        async function playLoop() {
+            if (!playing) return;
+            if (currentFrame < timeSteps.length - 1) {
+                await goTo(currentFrame + 1);
+                setTimeout(playLoop, 900);
+            } else {
+                playing = false;
+                playBtn.classList.remove("active");
+            }
+        }
+        playBtn.addEventListener("click", () => {
+            playing = !playing;
+            playBtn.classList.toggle("active", playing);
+            if (playing) {
+                if (currentFrame < 0) currentFrame = -1;
+                playLoop();
+            }
+        });
+
+        // Show all initially
+        await goTo(-1);
+    }
+
+    // ── Fit to data ──
+    function initFitToData(layerId) {
+        const btn = document.getElementById("fit-btn");
+        btn.addEventListener("click", async () => {
+            try {
+                const layers = await felt.getLayers();
+                const layer = layers.find(l => l.id === layerId);
+                if (layer?.bounds) {
+                    const b = layer.bounds;
+                    await felt.fitViewportToBounds({
+                        west: b.west ?? b[0],
+                        south: b.south ?? b[1],
+                        east: b.east ?? b[2],
+                        north: b.north ?? b[3],
+                    });
+                } else {
+                    // Fallback — world view
+                    await felt.setViewport({ center: { latitude: 10, longitude: 30 }, zoom: 2 });
+                }
+            } catch (e) { console.warn("Fit failed:", e); }
+        });
+    }
+
+    // ── Top 10 largest quakes ──
+    async function loadTopQuakes(layerId) {
+        const container = document.getElementById("top-quakes-container");
+        try {
+            const res = await felt.getFeatures({
+                layerId,
+                sorting: { attribute: "mag", direction: "desc" },
+                pageSize: 10
+            });
+            const features = res.features || [];
+            if (features.length === 0) {
+                container.innerHTML = `<div style="color:var(--text-muted);font-size:11px;">No features</div>`;
+                return;
+            }
+            container.innerHTML = features.map((f, i) => {
+                const p = f.properties || {};
+                const mag = typeof p.mag === "number" ? p.mag.toFixed(1) : "—";
+                const place = p.place || "Unknown location";
+                return `<div class="rank-item" data-fid="${f.id}">
+                    <span class="rank-num">${i + 1}</span>
+                    <span class="rank-mag">M ${mag}</span>
+                    <span class="rank-place">${place}</span>
+                </div>`;
+            }).join("");
+
+            container.querySelectorAll(".rank-item").forEach((el, idx) => {
+                el.addEventListener("click", async () => {
+                    const feat = features[idx];
+                    try {
+                        await felt.selectFeature({
+                            id: el.dataset.fid,
+                            layerId,
+                            showPopup: true,
+                            fitViewport: { maxZoom: 6 }
+                        });
+                    } catch (e) { console.warn("Select failed:", e); }
+                    // Also populate detail panel
+                    const p = feat.properties || {};
+                    renderDetailPanel(p, p.title || p.place || "Earthquake details");
+                });
+            });
+        } catch (e) {
+            console.warn("Top quakes failed:", e);
+            container.innerHTML = `<div style="color:var(--text-muted);font-size:11px;">Could not load</div>`;
+        }
+    }
+
+    // ── Legend ──
+    async function loadLegend() {
+        const container = document.getElementById("legend-container");
+        try {
+            const layers = await felt.getLayers();
+            const visibleLayers = layers.filter(l => l.visible !== false && l.style?.paint?.color);
+
+            if (visibleLayers.length === 0) {
+                container.innerHTML = `<div class="legend-label">No styled layers</div>`;
+                return;
+            }
+
+            let allLegendItems = [];
+            try { allLegendItems = await felt.getLegendItems(); } catch (e) {}
+
+            container.innerHTML = visibleLayers.map(vl => {
+                const colors = vl.style.paint.color;
+                const labels = vl.style?.legend?.displayName || {};
+                const categories = vl.style?.config?.categories || [];
+                const steps = vl.style?.config?.steps || [];
+                const title = nameMap[vl.style?.config?.numericAttribute] || nameMap[vl.style?.config?.categoricalAttribute] || vl.style?.config?.numericAttribute || vl.style?.config?.categoricalAttribute || vl.name || "Legend";
+
+                const layerLegendItems = allLegendItems.filter(li => li.layerId === vl.id);
+                const colorArr = Array.isArray(colors) ? colors : [colors];
+
+                return `<div style="margin-bottom:8px;">
+                    <div class="legend-section-title">${title}</div>
+                    <div class="legend-row">
+                        ${colorArr.map((c, i) => {
+                            let label = labels[String(i)] || categories[i] || "";
+                            if (!label && steps.length > 0) {
+                                // Build label from numeric steps
+                                if (i === 0) label = `< ${steps[0]}`;
+                                else if (i === colorArr.length - 1) label = `≥ ${steps[steps.length - 1]}`;
+                                else label = `${steps[i - 1]} – ${steps[i]}`;
+                            }
+                            const legendItemId = layerLegendItems[i]?.id || "";
+                            return `<div class="legend-item" data-layer-id="${vl.id}" data-legend-id="${legendItemId}">
+                                <div class="legend-swatch" style="background:${c}"></div>
+                                <div class="legend-label">${label}</div>
+                            </div>`;
+                        }).join("")}
+                    </div>
+                </div>`;
+            }).join("");
+
+            container.querySelectorAll(".legend-item").forEach(item => {
+                item.addEventListener("click", async () => {
+                    const legendId = item.dataset.legendId;
+                    const layerIdVal = item.dataset.layerId;
+                    if (!legendId) return;
+                    const isHidden = item.classList.toggle("hidden");
+                    const payload = isHidden
+                        ? { hide: [{ layerId: layerIdVal, id: legendId }] }
+                        : { show: [{ layerId: layerIdVal, id: legendId }] };
+                    try { await felt.setLegendItemVisibility(payload); } catch (e) {}
+                });
+            });
+        } catch (e) {
+            console.warn("Legend failed:", e);
+        }
+    }
+
+    // ── Hover tooltip ──
+    function initHoverTooltip() {
+        const tooltip = document.getElementById("hover-tooltip");
+        let lastTime = 0;
+        felt.onPointerMove({
+            handler: (e) => {
+                const now = Date.now();
+                if (now - lastTime < 60) return;
+                lastTime = now;
+
+                if (!e.features?.length) {
+                    tooltip.style.display = "none";
+                    return;
+                }
+
+                const p = e.features[0].properties || {};
+                const title = p.title || p.place || "Earthquake";
+                const mag = typeof p.mag === "number" ? `M ${p.mag.toFixed(1)}` : "";
+                const time = p.time ? new Date(Number(p.time)).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+
+                tooltip.innerHTML = `<div class="tooltip-label">${title}</div>`
+                    + (time ? `<div class="tooltip-sub">${time}${mag ? " · " + mag : ""}</div>` : (mag ? `<div class="tooltip-sub">${mag}</div>` : ""));
+                tooltip.style.display = "block";
+
+                const mapEl = document.getElementById("map");
+                const rect = mapEl.getBoundingClientRect();
+                tooltip.style.left = (e.point.x + rect.left + 14) + "px";
+                tooltip.style.top = (e.point.y + rect.top - 8) + "px";
+            }
+        });
+        document.getElementById("map").addEventListener("mouseleave", () => {
+            tooltip.style.display = "none";
+        });
+    }
+
+    // ── Click to detail ──
+    function initClickToDetail() {
+        felt.onPointerClick({
+            handler: (e) => {
+                const panel = document.getElementById("detail-panel");
+                if (!e.features?.length) { panel.innerHTML = ""; return; }
+                const feature = e.features[0];
+                const p = feature.properties || {};
+                const title = p.title || p.place || "Earthquake details";
+                renderDetailPanel(p, title);
+            }
+        });
+    }
+
+    // ── Init ──
+    async function init() {
+        initThemeToggle();
+
+        felt = await Felt.embed(document.getElementById('map'), CONFIG.mapId, {
+            uiControls: { showLegend: false, cooperativeGestures: false }
+        });
+
+        const details = await felt.getMapDetails();
+        const title = CONFIG.title || details.title || "Global Earthquakes";
+        document.getElementById('title').textContent = title;
+        document.title = title;
+        document.getElementById('subtitle').textContent = "USGS M4.5+ · last 30 days";
+
+        allLayers = await felt.getLayers();
+        const dataLayers = allLayers.filter(l => l.type !== 'raster' && l.visible !== false);
+
+        if (dataLayers.length === 0) {
+            document.getElementById('content').innerHTML = '<div class="empty-state">No data layers found.</div>';
+            return;
+        }
+
+        const firstLayer = dataLayers[0];
+        activeLayerId = firstLayer.id;
+        const rawPaint = firstLayer?.style?.paint?.color;
+        // Only use as a palette if it's an array of colors (categorical or numeric with steps).
+        // Proportional-symbol styles have a single color string — fall back to gradient.
+        currentPaintColors = (Array.isArray(rawPaint) && rawPaint.length >= 2) ? rawPaint : FALLBACK_COLORS;
+        mapStyledAttr = firstLayer?.style?.config?.numericAttribute || firstLayer?.style?.config?.categoricalAttribute || null;
+
+        // Accent from layer paint (accept hex, or parse rgb())
+        let accentHex = null;
+        if (rawPaint) {
+            const c = Array.isArray(rawPaint) ? rawPaint[Math.floor(rawPaint.length / 2)] : rawPaint;
+            if (typeof c === 'string') {
+                if (c.startsWith('#')) accentHex = c;
+                else if (c.startsWith('rgb')) {
+                    const m = c.match(/rgba?\((\d+)[ ,]+(\d+)[ ,]+(\d+)/);
+                    if (m) accentHex = '#' + [m[1], m[2], m[3]].map(n => (+n).toString(16).padStart(2, '0')).join('');
+                }
+            }
+        }
+        if (!accentHex) accentHex = FALLBACK_COLORS[Math.floor(FALLBACK_COLORS.length / 2)];
+        const isDark = CONFIG.theme === 'dark';
+        deriveTheme(accentHex, isDark);
+        document.getElementById('icon-sun').style.display = isDark ? 'block' : 'none';
+        document.getElementById('icon-moon').style.display = isDark ? 'none' : 'block';
+
+        // Schema / nameMap
+        const schema = await felt.getLayerSchema(activeLayerId);
+        nameMap = {};
+        schema.attributes.forEach(a => { nameMap[a.id] = a.displayName; });
+
+        // Feature count badge
+        document.getElementById('feature-count').style.display = '';
+        document.getElementById('count-label').textContent = `${schema.featureCount.toLocaleString()} features`;
+
+        // Attribute picker for histogram (numeric attrs that make sense for earthquakes)
+        const histAttrIds = ["mag", "sig", "felt", "cdi", "mmi"];
+        const histAttrs = histAttrIds
+            .map(id => schema.attributes.find(a => a.id === id))
+            .filter(Boolean);
+
+        initAttributePicker("hist-attr-select", histAttrs, (attrId) => loadHistogram(attrId), "mag");
+
+        // Load blocks
+        await Promise.all([
+            loadStatCards(activeLayerId),
+            loadHistogram("mag"),
+            initMagRangeSlider(activeLayerId),
+            initMagTypeFilter(activeLayerId),
+            initTimeSlider(activeLayerId),
+            loadTopQuakes(activeLayerId),
+            loadLegend(),
+        ]);
+
+        initTextSearch(activeLayerId);
+        initFitToData(activeLayerId);
+        initHoverTooltip();
+        initClickToDetail();
+    }
+
+    init().catch(err => {
+        console.error("SDK failed:", err);
+        document.getElementById("map").innerHTML =
+            `<p style="padding:40px;color:#6b7280;">Could not load map. <a href="https://felt.com/map/wZ24aiD4S8iIEFZExpGTUC" target="_blank">View on Felt</a></p>`;
+    });
+</script>
+</body>
+</html>

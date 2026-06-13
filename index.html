@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Felt App Gallery</title>
+    <style>
+      /* Light-theme tokens mirrored from the building-felt-apps base template */
+      :root {
+        --bg: #f7f8fa;
+        --card: #ffffff;
+        --border: #e4e7ec;
+        --border-strong: #d0d5dd;
+        --text: #101828;
+        --text-secondary: #475467;
+        --text-muted: #98a2b3;
+        --accent: #4338ca;
+        --accent-dim: #eef2ff;
+        --radius-md: 12px;
+        --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+        --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.08);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+      }
+      header {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 56px 24px 24px;
+      }
+      h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+      .sub { color: var(--text-secondary); font-size: 16px; margin: 0; max-width: 60ch; }
+      .grid {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 16px 24px 80px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+      }
+      .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+      .card h2 { font-size: 18px; margin: 0 0 6px; letter-spacing: -0.01em; }
+      .card .desc { color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin: 0 0 16px; flex: 1; }
+      .meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+      .actions { display: flex; gap: 8px; }
+      .btn {
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        border-radius: 8px;
+        padding: 8px 14px;
+        cursor: pointer;
+        border: 1px solid var(--border-strong);
+        background: var(--card);
+        color: var(--text);
+      }
+      .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .remix {
+        margin-top: 14px;
+        padding: 10px 12px;
+        background: var(--accent-dim);
+        border-radius: 8px;
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        line-height: 1.45;
+      }
+      .remix code { color: var(--text); font-size: 12px; }
+      .remix .label { font-weight: 600; color: var(--accent); display: block; margin-bottom: 4px; }
+      .empty { color: var(--text-muted); padding: 40px 24px; max-width: 1080px; margin: 0 auto; }
+      footer { max-width: 1080px; margin: 0 auto; padding: 0 24px 60px; color: var(--text-muted); font-size: 13px; }
+      footer a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Felt App Gallery</h1>
+      <p class="sub">
+        Interactive apps built from Felt maps with the <strong>building-felt-apps</strong> skill —
+        a few prompts from map to shareable URL. Click any card to open it, or copy its remix prompt
+        to keep building on it.
+      </p>
+    </header>
+    <main class="grid" id="grid"></main>
+    <footer>
+      Built with the building-felt-apps skill. To publish your own, ask Claude to
+      <em>"publish this app to the gallery."</em> Apps embed publicly-viewable Felt maps only —
+      no confidential data.
+    </footer>
+
+    <script>
+      async function load() {
+        const grid = document.getElementById("grid");
+        let apps = [];
+        try {
+          apps = await fetch("./apps.json", { cache: "no-store" }).then((r) => r.json());
+        } catch (e) {
+          grid.innerHTML = '<p class="empty">Could not load the app registry.</p>';
+          return;
+        }
+        if (!apps.length) {
+          grid.innerHTML = '<p class="empty">No apps published yet.</p>';
+          return;
+        }
+        apps.sort((a, b) => (b.published_at || "").localeCompare(a.published_at || ""));
+        grid.innerHTML = apps
+          .map((app) => {
+            const appUrl = `./${app.slug}/`;
+            return `
+              <article class="card">
+                <h2>${escape(app.title)}</h2>
+                <p class="desc">${escape(app.description || "")}</p>
+                <div class="meta">
+                  <span>by ${escape(app.author || "unknown")}</span>
+                  ${app.published_at ? `<span>·</span><span>${escape(app.published_at)}</span>` : ""}
+                </div>
+                <div class="actions">
+                  <a class="btn btn-primary" href="${appUrl}">Open app</a>
+                  ${app.map_url ? `<a class="btn" href="${escape(app.map_url)}" target="_blank" rel="noreferrer">View map</a>` : ""}
+                </div>
+                ${
+                  app.remix_prompt
+                    ? `<div class="remix"><span class="label">Remix prompt</span><code>${escape(app.remix_prompt)}</code></div>`
+                    : ""
+                }
+              </article>`;
+          })
+          .join("");
+      }
+      function escape(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+      load();
+    </script>
+  </body>
+</html>

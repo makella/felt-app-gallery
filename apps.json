@@ -1,0 +1,29 @@
+[
+  {
+    "slug": "baltimore-real-estate",
+    "title": "Baltimore Real Estate",
+    "description": "Listings explorer with price/beds histograms, zoning breakdown, and click-to-detail across a styled Baltimore map.",
+    "map_url": "https://felt.com/map/Baltimore-real-estate-jz9BmgQoPQ9BOXNVycYUxUjD",
+    "author": "makella",
+    "published_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/baltimore-real-estate/ — add a ranked list of the 10 most expensive listings."
+  },
+  {
+    "slug": "global-earthquakes",
+    "title": "Global Earthquakes — USGS M4.5+",
+    "description": "Seismic monitor: magnitude histogram, depth stats, time filtering, and click-to-detail on recent global earthquakes.",
+    "map_url": "https://felt.com/map/wZ24aiD4S8iIEFZExpGTUC",
+    "author": "makella",
+    "published_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/global-earthquakes/ — make it an ops dashboard for a monitoring team."
+  },
+  {
+    "slug": "transit-oriented-development",
+    "title": "Transit-Oriented Development Trends",
+    "description": "TOD explorer pairing transit access with development metrics, with category breakdowns and feature detail.",
+    "map_url": "https://felt.com/map/xGcqILF9CSY9BmxRNCmcCmuA",
+    "author": "makella",
+    "published_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/transit-oriented-development/ — add sliders that re-weight a suitability score and recolor the map."
+  }
+]
