@@ -1,5 +1,14 @@
 [
   {
+    "slug": "santa-barbara-fire-gaps-v2",
+    "title": "Santa Barbara — Fire Response Gap Analysis (v2, reviewer-grade)",
+    "description": "Rebuilt after a front-end / GIS-dev / GIS-specialist review: leads with a methodology + caveats block, honest counts (no avg of a 1–2 flag), risk-flag discrimination badges, an honest area summary instead of a skew-collapsed histogram, escaped feature data (XSS-safe), feature-count warnings on large layers, AA contrast, and keyboard focus states. Candidate sites are labeled as a heuristic, not an optimization.",
+    "map_url": "https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC",
+    "author": "makella",
+    "published_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-gaps-v2/ — add an equity lens by joining the Social Vulnerability layer to the zones (needs a felt-python spatial-join data step)."
+  },
+  {
     "slug": "santa-barbara-fire-gaps",
     "title": "Santa Barbara — Fire Response Gaps",
     "description": "Emergency-response decision tool: a gap-priority filter (coverage × very-high fire × flood) narrows the map to the zones that matter, plus coverage breakdown, distributions, and 5 suggested new fire-station sites ranked by zones served.",
