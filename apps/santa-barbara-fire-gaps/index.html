@@ -147,10 +147,24 @@
         const details = await felt.getMapDetails();
         document.getElementById("title").textContent = "Santa Barbara — Fire Response Gaps";
 
-        const layers = (await felt.getLayers()).filter((l) => l && l.visible !== false);
+        const layers = (await felt.getLayers()).filter(Boolean);
         const byName = (n) => layers.find((l) => l.name === n);
         const primary = byName("Evacuation Route Coverage Gaps");
         const suggested = byName("Suggested New Fire Station Locations");
+
+        // The layers this analysis needs ON — everything else is noise for THIS question.
+        const ANALYSIS = new Set([
+          "Evacuation Route Coverage Gaps",   // the gaps (primary)
+          "Suggested New Fire Station Locations", // the proposed fix
+          "Fire Stations",                     // where stations are today
+          "Fire Station Response Areas",       // current coverage
+        ]);
+        const isAnalysis = (l) => ANALYSIS.has(l.name);
+        // Curate the map on load: show the analysis set, hide the rest.
+        await felt.setLayerVisibility({
+          show: layers.filter(isAnalysis).map((l) => l.id),
+          hide: layers.filter((l) => !isAnalysis(l)).map((l) => l.id),
+        });
         const contextLayers = layers.filter((l) => l !== primary);
 
         // Per-layer name maps (id -> displayName) for detail panel labels
@@ -331,20 +345,25 @@
           });
         }
 
-        // ---- Context layer toggles ----
-        const ctxBlock = el("details", "block");
-        ctxBlock.innerHTML = `<summary>Context layers</summary><div class="toggles" id="toggles" style="margin-top:10px"></div>`;
-        content.appendChild(ctxBlock);
-        const togEl = ctxBlock.querySelector("#toggles");
-        contextLayers.forEach((l) => {
-          const id = "t_" + l.id;
+        // ---- Layer toggles: analysis layers (on) vs optional context (off) ----
+        function toggleRow(l) {
+          const on = isAnalysis(l);
           const row = el("label", "toggle");
-          row.innerHTML = `<input type="checkbox" id="${id}" checked /> ${l.name}`;
-          row.querySelector("input").addEventListener("change", (e) => {
-            felt.setLayerVisibility(e.target.checked ? { show: [l.id] } : { hide: [l.id] });
-          });
-          togEl.appendChild(row);
-        });
+          const cb = el("input"); cb.type = "checkbox"; cb.checked = on;
+          cb.addEventListener("change", (e) => felt.setLayerVisibility(e.target.checked ? { show: [l.id] } : { hide: [l.id] }));
+          row.appendChild(cb);
+          row.appendChild(document.createTextNode(" " + l.name));
+          return row;
+        }
+        const analysisToggles = contextLayers.filter(isAnalysis);   // on by default (excludes primary)
+        const otherToggles = contextLayers.filter((l) => !isAnalysis(l)); // off by default
+
+        const ctxBlock = el("div", "block");
+        ctxBlock.innerHTML = `<p class="block-title">Analysis layers</p><div class="toggles" id="t-analysis"></div>
+          <details style="margin-top:12px"><summary>More context (off)</summary><div class="toggles" id="t-other" style="margin-top:8px"></div></details>`;
+        content.appendChild(ctxBlock);
+        analysisToggles.forEach((l) => ctxBlock.querySelector("#t-analysis").appendChild(toggleRow(l)));
+        otherToggles.forEach((l) => ctxBlock.querySelector("#t-other").appendChild(toggleRow(l)));
 
         // ---- Legend ----
         const legBlock = el("div", "block");
