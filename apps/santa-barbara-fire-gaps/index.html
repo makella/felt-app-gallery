@@ -70,12 +70,15 @@
       .rank-name { font-size: 13px; font-weight: 500; }
       .rank-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
       .rank-val { font-size: 12px; font-weight: 600; text-align: right; }
-      .flt-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-      .flt-label { font-size: 12px; color: var(--text-secondary); }
+      .flt-help { font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin: 0 0 12px; }
+      .flt-group { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+      .flt-label { font-size: 12px; font-weight: 600; color: var(--text); }
       .flt-covs { display: flex; gap: 6px; }
-      .flt-chip { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; cursor: pointer; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); }
+      .flt-chip { font: inherit; font-size: 12px; padding: 5px 12px; border-radius: 999px; cursor: pointer; color: var(--text-secondary); background: var(--bg); border: 1px solid var(--border); }
       .flt-chip.on { color: #fff; background: var(--chip); border-color: var(--chip); }
-      .flt-count { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
+      .flt-hint { font-size: 11px; color: var(--text-muted); margin: 5px 0 10px; }
+      .flt-count { font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 10px 0 0; }
+      .flt-count.active { color: var(--accent); }
       .toggles { display: flex; flex-direction: column; gap: 4px; }
       .toggle { display: flex; align-items: center; gap: 9px; font-size: 13px; padding: 4px 2px; cursor: pointer; }
       .toggle input { cursor: pointer; }
@@ -230,13 +233,16 @@
         }
         await refreshStats();
 
-        // ---- Gap priority filter (decision tool: narrow to the gaps that matter) ----
+        // ---- Find priority gaps: narrow the zones to the ones that need a station most ----
         const fltBlock = el("div", "block");
-        fltBlock.innerHTML = `<p class="block-title">Gap priority filter</p>
-          <div class="flt-group"><span class="flt-label">Coverage</span><div class="flt-covs" id="flt-covs"></div></div>
-          <label class="toggle"><input type="checkbox" id="flt-fire" /> Very-high fire hazard only</label>
-          <label class="toggle"><input type="checkbox" id="flt-flood" /> Flood-risk only</label>
-          <p class="flt-count" id="flt-count">342 zones shown</p>`;
+        fltBlock.innerHTML = `<p class="block-title">Find priority gaps</p>
+          <p class="flt-help">Narrow the map to the evacuation zones that need a new station most. Pick how well they're covered today, then optionally limit to high-risk areas.</p>
+          <div class="flt-group"><span class="flt-label">Show zones with coverage:</span></div>
+          <div class="flt-covs" id="flt-covs"></div>
+          <p class="flt-hint">none selected = show all</p>
+          <label class="toggle"><input type="checkbox" id="flt-fire" /> Only in very-high fire-hazard areas</label>
+          <label class="toggle"><input type="checkbox" id="flt-flood" /> Only in flood-risk areas</label>
+          <p class="flt-count" id="flt-count">Showing all 342 zones</p>`;
         content.appendChild(fltBlock);
 
         const covSel = new Set();
@@ -247,7 +253,10 @@
         }
         async function updateFltCount() {
           const res = await felt.getAggregates({ layerId: pid, filters: lockedFilters(), aggregation: { methods: ["count"] } });
-          fltBlock.querySelector("#flt-count").textContent = `${fmt(res.count)} zones shown`;
+          const n = res.count;
+          const elc = fltBlock.querySelector("#flt-count");
+          elc.textContent = n === 342 ? "Showing all 342 zones" : `Showing ${fmt(n)} of 342 zones`;
+          elc.classList.toggle("active", n !== 342);
         }
         const covsEl = fltBlock.querySelector("#flt-covs");
         ["Poor", "Moderate", "Good"].forEach((c) => {
