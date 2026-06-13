@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Santa Barbara — Fire Response Gaps</title>
+    <style>
+      .app {
+        --bg: #f6f7f9; --card: #ffffff; --border: #e4e7ec; --text: #101828;
+        --text-secondary: #475467; --text-muted: #98a2b3; --accent: #d12b2b;
+        --good: #2d9e2d; --moderate: #e8900a; --poor: #d12b2b; --skeleton: #e4e7ec;
+        --radius: 10px;
+        display: flex; height: 100vh; color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .app[data-theme="dark"] {
+        --bg: #0f172a; --card: #1e293b; --border: #334155; --text: #f1f5f9;
+        --text-secondary: #cbd5e1; --text-muted: #94a3b8; --skeleton: #334155;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      #map { flex: 1; min-width: 50%; }
+      .sidebar {
+        width: 384px; flex: none; overflow-y: auto; background: var(--bg);
+        border-left: 1px solid var(--border); display: flex; flex-direction: column;
+      }
+      .head {
+        position: sticky; top: 0; z-index: 2; background: var(--card);
+        border-bottom: 1px solid var(--border); padding: 14px 18px;
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      }
+      .head h1 { font-size: 15px; margin: 0; letter-spacing: -0.01em; }
+      .head .count { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+      .theme-btn {
+        font: inherit; font-size: 15px; width: 32px; height: 32px; flex: none; cursor: pointer;
+        border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 8px;
+      }
+      .content { padding: 16px 18px 40px; display: flex; flex-direction: column; gap: 18px; }
+      .block { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+      .block-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 10px; }
+      .block-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+      .block-head .block-title { margin: 0; }
+      select {
+        font: inherit; font-size: 12px; max-width: 55%; background: var(--bg); color: var(--text);
+        border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px;
+      }
+      .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+      .stat .v { font-size: 20px; font-weight: 700; line-height: 1.15; }
+      .stat .l { font-size: 11px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .bars { display: flex; flex-direction: column; gap: 6px; }
+      .bar-row { display: grid; grid-template-columns: 84px 1fr 40px; align-items: center; gap: 8px; background: none; border: none; padding: 3px; border-radius: 6px; cursor: pointer; color: var(--text); font: inherit; text-align: left; }
+      .bar-row:hover { background: var(--bg); }
+      .bar-row.locked { box-shadow: inset 0 0 0 2px var(--accent); }
+      .bar-label { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .bar-track { height: 14px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+      .bar-fill { display: block; height: 100%; border-radius: 4px; }
+      .bar-val { font-size: 11px; color: var(--text-muted); text-align: right; }
+      .hist { display: flex; align-items: flex-end; gap: 2px; height: 90px; }
+      .hist-bar { flex: 1; border: none; border-radius: 2px 2px 0 0; padding: 0; cursor: pointer; background: var(--accent); opacity: 0.82; }
+      .hist-bar:hover { opacity: 1; }
+      .hist-bar.locked { outline: 2px solid var(--text); }
+      .hist-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+      .rank { display: flex; flex-direction: column; gap: 6px; }
+      .rank-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; cursor: pointer; color: var(--text); font: inherit; text-align: left; }
+      .rank-row:hover { border-color: var(--accent); }
+      .rank-n { font-weight: 700; color: var(--accent); font-size: 13px; }
+      .rank-name { font-size: 13px; font-weight: 500; }
+      .rank-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+      .rank-val { font-size: 12px; font-weight: 600; text-align: right; }
+      .toggles { display: flex; flex-direction: column; gap: 4px; }
+      .toggle { display: flex; align-items: center; gap: 9px; font-size: 13px; padding: 4px 2px; cursor: pointer; }
+      .toggle input { cursor: pointer; }
+      .legend { display: flex; flex-direction: column; gap: 6px; }
+      .legend-row { display: flex; align-items: center; gap: 9px; font-size: 12px; }
+      .legend-sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+      .detail { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; }
+      .detail-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+      .detail-k { color: var(--text-muted); flex: none; max-width: 48%; }
+      .detail-v { text-align: right; word-break: break-word; }
+      .muted { font-size: 12px; color: var(--text-muted); margin: 0; }
+      .skeleton { animation: pulse 1.4s ease-in-out infinite; background: var(--skeleton); border-color: transparent; border-radius: var(--radius); }
+      .sk-stat { height: 64px; } .sk-chart { height: 110px; }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+      details > summary { cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); list-style: none; }
+      details > summary::-webkit-details-marker { display: none; }
+      details > summary::before { content: "▸ "; }
+      details[open] > summary::before { content: "▾ "; }
+      @media (max-width: 768px) {
+        .app { flex-direction: column; } #map { min-height: 45vh; }
+        .sidebar { width: auto; border-left: none; border-top: 1px solid var(--border); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app" id="app" data-theme="light">
+      <div id="map"></div>
+      <aside class="sidebar">
+        <div class="head">
+          <div>
+            <h1 id="title">Loading…</h1>
+            <div class="count" id="count"></div>
+          </div>
+          <button class="theme-btn" id="theme" aria-label="Toggle theme">◐</button>
+        </div>
+        <div class="content" id="content">
+          <div class="stat-grid">
+            <div class="stat skeleton sk-stat"></div><div class="stat skeleton sk-stat"></div>
+            <div class="stat skeleton sk-stat"></div><div class="stat skeleton sk-stat"></div>
+          </div>
+          <div class="skeleton sk-chart"></div>
+          <div class="skeleton sk-chart"></div>
+        </div>
+      </aside>
+    </div>
+
+    <script type="module">
+      import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+
+      const CONFIG = { mapId: "bXK9BCeAzTTijymyBtzGEGC" };
+      const COVERAGE_COLORS = { Good: "#2d9e2d", Moderate: "#e8900a", Poor: "#d12b2b" };
+      const FALLBACK = ["#d12b2b", "#e8900a", "#2d9e2d"];
+
+      const fmt = (v) => {
+        if (v == null || Number.isNaN(v)) return "—";
+        const a = Math.abs(v);
+        if (a >= 1e6) return (v / 1e6).toFixed(2) + "M";
+        if (a >= 1e4) return (v / 1e3).toFixed(1) + "K";
+        if (Number.isInteger(v)) return v.toLocaleString();
+        return v.toFixed(1);
+      };
+
+      async function init() {
+        const felt = await Felt.embed(document.getElementById("map"), CONFIG.mapId, {
+          uiControls: { showLegend: false, cooperativeGestures: false },
+        });
+
+        const details = await felt.getMapDetails();
+        document.getElementById("title").textContent = "Santa Barbara — Fire Response Gaps";
+
+        const layers = (await felt.getLayers()).filter((l) => l && l.visible !== false);
+        const byName = (n) => layers.find((l) => l.name === n);
+        const primary = byName("Evacuation Route Coverage Gaps");
+        const suggested = byName("Suggested New Fire Station Locations");
+        const contextLayers = layers.filter((l) => l !== primary);
+
+        // Per-layer name maps (id -> displayName) for detail panel labels
+        const nameMaps = {};
+        for (const l of layers) {
+          try {
+            const s = await felt.getLayerSchema(l.id);
+            const m = {}; s.attributes.forEach((a) => (m[a.id] = a.displayName));
+            nameMaps[l.id] = m;
+          } catch { nameMaps[l.id] = {}; }
+        }
+
+        const pid = primary.id;
+        document.getElementById("count").textContent =
+          (await felt.getLayerSchema(pid)).featureCount.toLocaleString() + " evacuation zones";
+
+        // ---- Composed, AND-tied filters on the primary layer ----
+        const sources = new Map();
+        async function applyFilters() {
+          const tuples = [...sources.values()];
+          let filters = null;
+          if (tuples.length === 1) filters = tuples[0];
+          else if (tuples.length > 1) filters = tuples.slice(1).reduce((acc, t) => [acc, "and", t], tuples[0]);
+          await felt.setLayerFilters({ layerId: pid, filters });
+          refreshStats();
+        }
+        function setSource(key, tuple) { if (tuple) sources.set(key, tuple); else sources.delete(key); applyFilters(); }
+        function lockedFilters() {
+          const tuples = [...sources.entries()].filter(([k]) => !k.endsWith("-hover")).map(([, t]) => t);
+          if (!tuples.length) return null;
+          return tuples.length === 1 ? tuples[0] : tuples.slice(1).reduce((acc, t) => [acc, "and", t], tuples[0]);
+        }
+
+        const content = document.getElementById("content");
+        content.innerHTML = "";
+
+        // ---- Stat cards ----
+        const statBlock = el("div", "stat-grid"); content.appendChild(statBlock);
+        const STATS = [
+          { label: "Zones", agg: "count" },
+          { label: "Avg Hazard Score", agg: "avg", attr: "hazard_score" },
+          { label: "Avg Area (acres)", agg: "avg", attr: "acres" },
+          { label: "Largest Zone (acres)", agg: "max", attr: "acres" },
+        ];
+        const statValEls = STATS.map((s) => {
+          const card = el("div", "stat");
+          card.innerHTML = `<div class="v">—</div><div class="l">${s.label}</div>`;
+          statBlock.appendChild(card);
+          return card.querySelector(".v");
+        });
+        let statRun = 0;
+        async function refreshStats() {
+          const myRun = ++statRun;
+          const filters = lockedFilters();
+          const results = await Promise.all(STATS.map((s) =>
+            felt.getAggregates({ layerId: pid, filters, aggregation: s.agg === "count" ? { methods: ["count"] } : { methods: [s.agg], attribute: s.attr } })
+          ));
+          if (myRun !== statRun) return; // a newer refresh superseded this one — avoid double-render race
+          results.forEach((res, i) => {
+            const s = STATS[i];
+            statValEls[i].textContent = fmt(s.agg === "count" ? res.count : res[s.agg]);
+          });
+        }
+        await refreshStats();
+
+        // ---- Bar chart: coverage (map-matched colors) ----
+        const barBlock = el("div", "block"); barBlock.innerHTML = `<p class="block-title">Coverage</p><div class="bars" id="bars"></div>`;
+        content.appendChild(barBlock);
+        const cats = await felt.getCategoryData({ layerId: pid, attribute: "coverage" });
+        const order = ["Poor", "Moderate", "Good"];
+        const rows = cats.map((c) => ({ key: String(c.key), value: c.value }))
+          .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+        const maxBar = Math.max(...rows.map((r) => r.value), 1);
+        let lockedCov = null;
+        const barsEl = barBlock.querySelector("#bars");
+        barsEl.addEventListener("mouseleave", () => setSource("chart-hover", null));
+        rows.forEach((r) => {
+          const b = el("button", "bar-row"); b.type = "button";
+          b.innerHTML = `<span class="bar-label">${r.key}</span><span class="bar-track"><span class="bar-fill" style="width:${(r.value / maxBar) * 100}%;background:${COVERAGE_COLORS[r.key] || FALLBACK[0]}"></span></span><span class="bar-val">${fmt(r.value)}</span>`;
+          b.addEventListener("mouseenter", () => setSource("chart-hover", ["coverage", "eq", r.key]));
+          b.addEventListener("click", () => {
+            lockedCov = lockedCov === r.key ? null : r.key;
+            [...barsEl.children].forEach((c) => c.classList.remove("locked"));
+            if (lockedCov) b.classList.add("locked");
+            setSource("chart-lock", lockedCov ? ["coverage", "eq", lockedCov] : null);
+          });
+          barsEl.appendChild(b);
+        });
+
+        // ---- Histogram with attribute-picker (continuous numerics only) ----
+        const NUMS = [
+          { id: "acres", label: "Area (acres)" },
+          { id: "hazard_score", label: "Hazard Score" },
+        ];
+        const histBlock = el("div", "block");
+        histBlock.innerHTML = `<div class="block-head"><p class="block-title">Distribution</p><select id="hsel">${NUMS.map((n, i) => `<option value="${n.id}" ${i === 0 ? "selected" : ""}>${n.label}</option>`).join("")}</select></div><div class="hist" id="hist"></div><div class="hist-ends"><span id="he0"></span><span id="he1"></span></div>`;
+        content.appendChild(histBlock);
+        const histEl = histBlock.querySelector("#hist");
+        let lockedBin = null;
+        async function drawHist(attr) {
+          lockedBin = null; setSource("hist-lock", null); setSource("hist-lock-hi", null);
+          histEl.innerHTML = `<div class="skeleton sk-chart" style="width:100%"></div>`;
+          const bins = await felt.getHistogramData({ layerId: pid, attribute: attr, steps: { type: "equal-intervals", count: 18 } });
+          const maxB = Math.max(...bins.map((b) => b.value), 1);
+          histEl.innerHTML = "";
+          histEl.addEventListener("mouseleave", () => { setSource("hist-hover", null); setSource("hist-hover-hi", null); });
+          bins.forEach((bin) => {
+            const bar = el("button", "hist-bar"); bar.type = "button";
+            bar.style.height = `${Math.max((bin.value / maxB) * 100, 2)}%`;
+            bar.title = `${fmt(bin.min)}–${fmt(bin.max)}: ${fmt(bin.value)}`;
+            bar.addEventListener("mouseenter", () => { setSource("hist-hover", [attr, "ge", bin.min]); setSource("hist-hover-hi", [attr, "le", bin.max]); });
+            bar.addEventListener("click", () => {
+              const on = lockedBin !== bin.min; lockedBin = on ? bin.min : null;
+              [...histEl.children].forEach((c) => c.classList.remove("locked"));
+              if (on) bar.classList.add("locked");
+              setSource("hist-lock", on ? [attr, "ge", bin.min] : null);
+              setSource("hist-lock-hi", on ? [attr, "le", bin.max] : null);
+            });
+            histEl.appendChild(bar);
+          });
+          histBlock.querySelector("#he0").textContent = bins.length ? fmt(bins[0].min) : "";
+          histBlock.querySelector("#he1").textContent = bins.length ? fmt(bins[bins.length - 1].max) : "";
+        }
+        histBlock.querySelector("#hsel").addEventListener("change", (e) => drawHist(e.target.value));
+        await drawHist(NUMS[0].id);
+
+        // ---- Recommendations: ranked suggested stations ----
+        if (suggested) {
+          const recBlock = el("div", "block");
+          recBlock.innerHTML = `<p class="block-title">Suggested new stations</p><div class="rank" id="rank"></div>`;
+          content.appendChild(recBlock);
+          const feats = await felt.getFeatures({ layerId: suggested.id, sorting: { attribute: "zones_served", direction: "desc" }, pageSize: 5 });
+          const list = feats.features || feats;
+          const rankEl = recBlock.querySelector("#rank");
+          list.forEach((f, i) => {
+            const p = f.properties || {};
+            const row = el("button", "rank-row"); row.type = "button";
+            row.innerHTML = `<span class="rank-n">${i + 1}</span><span><div class="rank-name">${p.suggested_station ?? "Site " + (i + 1)}</div><div class="rank-sub">evacuation zones served · click to locate</div></span><span class="rank-val">${fmt(p.zones_served)}</span>`;
+            row.addEventListener("click", async () => { try { await felt.selectFeature({ layerId: suggested.id, featureId: f.id }); } catch {} });
+            rankEl.appendChild(row);
+          });
+        }
+
+        // ---- Context layer toggles ----
+        const ctxBlock = el("details", "block");
+        ctxBlock.innerHTML = `<summary>Context layers</summary><div class="toggles" id="toggles" style="margin-top:10px"></div>`;
+        content.appendChild(ctxBlock);
+        const togEl = ctxBlock.querySelector("#toggles");
+        contextLayers.forEach((l) => {
+          const id = "t_" + l.id;
+          const row = el("label", "toggle");
+          row.innerHTML = `<input type="checkbox" id="${id}" checked /> ${l.name}`;
+          row.querySelector("input").addEventListener("change", (e) => {
+            felt.setLayerVisibility(e.target.checked ? { show: [l.id] } : { hide: [l.id] });
+          });
+          togEl.appendChild(row);
+        });
+
+        // ---- Legend ----
+        const legBlock = el("div", "block");
+        legBlock.innerHTML = `<p class="block-title">Legend</p><div class="legend">
+          ${order.slice().reverse().map((k) => `<div class="legend-row"><span class="legend-sw" style="background:${COVERAGE_COLORS[k]}"></span>${k} coverage</div>`).join("")}
+        </div>`;
+        content.appendChild(legBlock);
+
+        // ---- Detail panel (click-to-detail across all layers) ----
+        const detBlock = el("div", "block");
+        detBlock.innerHTML = `<p class="block-title">Feature details</p><div id="detail"><p class="muted">Click any feature on the map to inspect it.</p></div>`;
+        content.appendChild(detBlock);
+        const detEl = detBlock.querySelector("#detail");
+        felt.onPointerClick({
+          handler: (e) => {
+            const f = e.features && e.features[0];
+            if (!f) return;
+            const m = nameMaps[f.layerId] || {};
+            const props = f.properties || {};
+            const keys = Object.keys(props).slice(0, 30);
+            detEl.innerHTML = keys.length
+              ? `<div class="detail">${keys.map((k) => `<div class="detail-row"><span class="detail-k">${m[k] || k}</span><span class="detail-v">${props[k] == null ? "—" : String(props[k])}</span></div>`).join("")}</div>`
+              : `<p class="muted">No properties.</p>`;
+          },
+        });
+
+        // ---- Theme toggle ----
+        const app = document.getElementById("app");
+        document.getElementById("theme").addEventListener("click", () => {
+          app.dataset.theme = app.dataset.theme === "light" ? "dark" : "light";
+        });
+
+        window.__ready = true;
+      }
+
+      function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+
+      init().catch((err) => {
+        console.error("SDK failed:", err);
+        document.getElementById("content").innerHTML =
+          `<p class="muted" style="padding:20px">Could not load the map. <a href="https://felt.com/map/${CONFIG.mapId}" target="_blank" rel="noreferrer">View it on Felt</a>.</p>`;
+      });
+    </script>
+  </body>
+</html>
