@@ -2,11 +2,12 @@
   {
     "slug": "santa-barbara-fire-gaps",
     "title": "Santa Barbara — Fire Response Gaps",
-    "description": "Emergency-response gap explorer: coverage breakdown (Good/Moderate/Poor), hazard & area distributions, 5 suggested new fire-station sites ranked by zones served, and context layer toggles. Cross-filters the map.",
+    "description": "Emergency-response decision tool: a gap-priority filter (coverage × very-high fire × flood) narrows the map to the zones that matter, plus coverage breakdown, distributions, and 5 suggested new fire-station sites ranked by zones served.",
     "map_url": "https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC",
     "author": "makella",
     "published_at": "2026-06-13",
-    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-gaps/ — add a behavior: a Hazard Score slider that recolors the evacuation zones live."
+    "updated_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-gaps/ — bake a weighted priority score onto the zones (needs a felt-python data step) so sliders can recolor them live."
   },
   {
     "slug": "baltimore-real-estate",
