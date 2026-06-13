@@ -120,7 +120,7 @@
         apps.sort((a, b) => (b.published_at || "").localeCompare(a.published_at || ""));
         grid.innerHTML = apps
           .map((app) => {
-            const appUrl = `./${app.slug}/`;
+            const appUrl = `./apps/${app.slug}/`;
             return `
               <article class="card">
                 <h2>${escape(app.title)}</h2>

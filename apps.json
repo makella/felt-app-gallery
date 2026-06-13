@@ -6,7 +6,7 @@
     "map_url": "https://felt.com/map/Baltimore-real-estate-jz9BmgQoPQ9BOXNVycYUxUjD",
     "author": "makella",
     "published_at": "2026-06-13",
-    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/baltimore-real-estate/ — add a ranked list of the 10 most expensive listings."
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/baltimore-real-estate/ — add a ranked list of the 10 most expensive listings."
   },
   {
     "slug": "global-earthquakes",
@@ -15,7 +15,7 @@
     "map_url": "https://felt.com/map/wZ24aiD4S8iIEFZExpGTUC",
     "author": "makella",
     "published_at": "2026-06-13",
-    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/global-earthquakes/ — make it an ops dashboard for a monitoring team."
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/global-earthquakes/ — make it an ops dashboard for a monitoring team."
   },
   {
     "slug": "transit-oriented-development",
@@ -24,6 +24,6 @@
     "map_url": "https://felt.com/map/xGcqILF9CSY9BmxRNCmcCmuA",
     "author": "makella",
     "published_at": "2026-06-13",
-    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/transit-oriented-development/ — add sliders that re-weight a suitability score and recolor the map."
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/transit-oriented-development/ — add sliders that re-weight a suitability score and recolor the map."
   }
 ]

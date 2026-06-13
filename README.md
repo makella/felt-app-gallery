@@ -6,7 +6,7 @@ Interactive apps built from [Felt](https://felt.com) maps using the **building-f
 
 ## What's here
 
-Each app is a single self-contained HTML file that embeds a Felt map and adds interactive UI on top (stat cards, charts, filters, custom behaviors). Apps live at `apps/<slug>/index.html` and serve at `https://makella.github.io/felt-app-gallery/<slug>/`. The registry `apps.json` drives the gallery index page.
+Each app is a single self-contained HTML file that embeds a Felt map and adds interactive UI on top (stat cards, charts, filters, custom behaviors). Apps live at `apps/<slug>/index.html` and serve at `https://makella.github.io/felt-app-gallery/apps/<slug>/`. The registry `apps.json` drives the gallery index page.
 
 ## Publish an app here
 
