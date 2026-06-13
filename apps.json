@@ -18,6 +18,15 @@
     "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/global-earthquakes/ — make it an ops dashboard for a monitoring team."
   },
   {
+    "slug": "baltimore-color-by",
+    "title": "Baltimore Listings — Color By",
+    "description": "Live-restyle behavior: buttons recolor the map by price, sq ft, beds, or Zestimate via setLayerStyle. Demonstrates a map-driving behavior, not just a sidebar.",
+    "map_url": "https://felt.com/map/Baltimore-real-estate-jz9BmgQoPQ9BOXNVycYUxUjD",
+    "author": "makella",
+    "published_at": "2026-06-13",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/baltimore-color-by/ — turn the metric buttons into weight sliders that combine into one composite score."
+  },
+  {
     "slug": "transit-oriented-development",
     "title": "Transit-Oriented Development Trends",
     "description": "TOD explorer pairing transit access with development metrics, with category breakdowns and feature detail.",

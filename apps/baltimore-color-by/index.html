@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baltimore Listings — Color By</title>
+    <style>
+      :root {
+        --bg: #f7f8fa; --card: #ffffff; --border: #e4e7ec; --text: #101828;
+        --text-muted: #667085; --accent: #b91c1c; --radius: 12px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--text); }
+      #app { display: flex; height: 100vh; }
+      #map { flex: 1; min-width: 50%; }
+      .panel { width: 320px; background: var(--bg); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; }
+      h1 { font-size: 17px; margin: 0 0 4px; letter-spacing: -0.01em; }
+      .sub { font-size: 13px; color: var(--text-muted); margin: 0 0 20px; line-height: 1.45; }
+      .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 0 0 8px; }
+      .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .btn { font: inherit; font-size: 14px; padding: 10px; border: 1px solid var(--border); background: var(--card); border-radius: 8px; cursor: pointer; color: var(--text); }
+      .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .ramp { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 16px 0 6px; }
+      .ramp span { flex: 1; }
+      .ramp-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+      .status { margin-top: 16px; font-size: 12px; color: var(--text-muted); min-height: 16px; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="map"></div>
+      <aside class="panel">
+        <h1>Baltimore Listings</h1>
+        <p class="sub">Recolor the map live by any metric — a map-driving behavior (live restyle via <code>setLayerStyle</code>).</p>
+        <p class="label">Color by</p>
+        <div class="btns" id="btns"></div>
+        <div class="ramp" id="ramp"></div>
+        <div class="ramp-ends"><span>low</span><span>high</span></div>
+        <div class="status" id="status">Loading map…</div>
+      </aside>
+    </div>
+
+    <script type="module">
+      import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+
+      const CONFIG = { mapId: "jz9BmgQoPQ9BOXNVycYUxUjD" };
+      const RAMP = ["#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15"]; // sequential reds
+      const METRICS = [
+        { id: "price", label: "Price" },
+        { id: "sqft", label: "Sq Ft" },
+        { id: "beds", label: "Beds" },
+        { id: "zestimate", label: "Zestimate" },
+      ];
+
+      async function init() {
+        const felt = await Felt.embed(document.getElementById("map"), CONFIG.mapId, {
+          uiControls: { showLegend: false, cooperativeGestures: false },
+        });
+
+        // Find the rich point layer (Listings feed)
+        const layers = (await felt.getLayers()).filter((l) => l && l.visible !== false);
+        let target = layers.find((l) => /listing/i.test(l.name || "")) || layers[0];
+        const layerId = target.id;
+
+        // Render the color ramp swatches
+        document.getElementById("ramp").innerHTML = RAMP.map((c) => `<span style="background:${c}"></span>`).join("");
+
+        // BEHAVIOR: rebind a numeric color ramp to the chosen attribute — live restyle.
+        async function colorBy(attr) {
+          await felt.setLayerStyle({
+            id: layerId,
+            style: {
+              type: "numeric",
+              config: { numericAttribute: attr, steps: { type: "quantiles", count: 5 } },
+              paint: { color: RAMP, size: 6, opacity: 0.9, strokeColor: "#ffffff", strokeWidth: 0.5 },
+            },
+          });
+          window.__coloredBy = attr; // test hook
+          document.getElementById("status").textContent = `Colored by ${attr}. Click another metric to recolor.`;
+        }
+
+        const btns = document.getElementById("btns");
+        METRICS.forEach((m, i) => {
+          const b = document.createElement("button");
+          b.className = "btn" + (i === 0 ? " active" : "");
+          b.textContent = m.label;
+          b.dataset.attr = m.id;
+          b.addEventListener("click", async () => {
+            [...btns.children].forEach((c) => c.classList.remove("active"));
+            b.classList.add("active");
+            await colorBy(m.id);
+          });
+          btns.appendChild(b);
+        });
+
+        await colorBy(METRICS[0].id); // initial paint
+        window.__ready = true; // test hook
+      }
+
+      init().catch((err) => {
+        console.error("SDK failed:", err);
+        document.getElementById("status").textContent = "Could not load the map. View it on Felt: https://felt.com/map/" + CONFIG.mapId;
+      });
+    </script>
+  </body>
+</html>
