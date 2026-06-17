@@ -39,6 +39,14 @@
       .detail{display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto}
       .detail-row{display:flex;justify-content:space-between;gap:12px;font-size:12px}
       .detail-k{color:var(--text-muted);flex:none;max-width:48%} .detail-v{text-align:right;word-break:break-word}
+      .tool-help{font-size:12px;color:var(--text-secondary);line-height:1.45;margin:0 0 10px}
+      .tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .fld{display:flex;flex-direction:column;font-size:11px;color:var(--text-muted);gap:3px}
+      .fld input{font:inherit;font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px}
+      .tool-out{font-size:13px;color:var(--text-secondary);margin:10px 0 8px} .tool-out strong{color:var(--text)}
+      .tool-btn{font:inherit;font-size:12px;padding:5px 12px;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:6px;cursor:pointer}
+      .cb-btns{display:flex;gap:6px;flex-wrap:wrap} .cb-btn{font:inherit;font-size:12px;padding:6px 12px;border:1px solid var(--border);background:var(--bg);color:var(--text-secondary);border-radius:8px;cursor:pointer}
+      .cb-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
       .muted{font-size:12px;color:var(--text-muted);margin:0}
       .skeleton{animation:pulse 1.4s ease-in-out infinite;background:var(--skeleton);border-color:transparent;border-radius:var(--radius)}
       .sk-stat{height:64px} .sk-chart{height:96px}
@@ -82,6 +90,7 @@
         document.getElementById("count").textContent = `${TOTAL.toLocaleString()} listings`;
         const accent = (Array.isArray(primary.style?.paint?.color) ? primary.style.paint.color[0] : primary.style?.paint?.color) || "#5288c1";
         if (typeof accent==="string" && accent.startsWith("#")) document.querySelector(".app").style.setProperty("--accent", accent);
+        const baseStyle = primary.style; // captured so "Default" can restore the map's original look
 
         const sources = new Map();
         const apply = async ()=>{ const t=[...sources.values()]; await felt.setLayerFilters({layerId:pid, filters: t.length?t.reduce((a,x)=>andF(a,x)):null}); refreshStats(); };
@@ -127,6 +136,36 @@
 
         // Price spread (honest summary, not a skew-collapsed histogram)
         if(prices.length){const d=el("div","block");d.innerHTML=`<p class="block-title">Price spread</p><p class="dist">Half of listings are under <strong>${fmt(q(.5))}</strong>; 90% under <strong>${fmt(q(.9))}</strong>; highest <strong>${fmt(prices[prices.length-1])}</strong>.</p>`;content.appendChild(d);}
+
+        // ── Custom tool 1: Affordability calculator — filter listings to a buyer's budget ──
+        const calc=el("div","block");
+        calc.innerHTML=`<p class="block-title">What can I afford?</p>
+          <p class="tool-help">Enter a monthly budget and down payment to see which listings fit (standard mortgage estimate).</p>
+          <div class="tool-grid">
+            <label class="fld">Monthly budget $<input type="number" id="c-month" value="2500" min="0" step="100"></label>
+            <label class="fld">Down payment $<input type="number" id="c-down" value="40000" min="0" step="5000"></label>
+            <label class="fld">Rate %<input type="number" id="c-rate" value="7" min="0" step="0.25"></label>
+            <label class="fld">Term (yrs)<input type="number" id="c-term" value="30" min="1" step="1"></label>
+          </div>
+          <p class="tool-out" id="c-out" aria-live="polite"></p>
+          <button class="tool-btn" id="c-clear" type="button">Clear filter</button>`;
+        content.appendChild(calc);
+        const affordPrice=()=>{const M=+calc.querySelector("#c-month").value||0,D=+calc.querySelector("#c-down").value||0,r=(+calc.querySelector("#c-rate").value||0)/100/12,nM=(+calc.querySelector("#c-term").value||30)*12;const loan=r>0?M*(1-Math.pow(1+r,-nM))/r:M*nM;return Math.round(loan+D);};
+        async function applyAfford(){const price=affordPrice();sources.set("afford",["price","le",price]);await apply();const res=await felt.getAggregates({layerId:pid,filters:locked(),aggregation:{methods:["count"]}});calc.querySelector("#c-out").innerHTML=`Up to <strong>${fmt(price)}</strong> — <strong>${n(res.count)}</strong> of ${n(TOTAL)} listings fit.`;}
+        ["c-month","c-down","c-rate","c-term"].forEach((id)=>calc.querySelector("#"+id).addEventListener("input",applyAfford));
+        calc.querySelector("#c-clear").addEventListener("click",()=>{setSrc("afford",null);calc.querySelector("#c-out").textContent="";});
+        await applyAfford();
+
+        // ── Custom tool 2: Color the map by a metric — live restyle ──
+        const COLORS=["#deebf7","#9ecae1","#4292c6","#2171b5","#084594"];
+        const cb=el("div","block");
+        cb.innerHTML=`<p class="block-title">Color the map by</p><p class="tool-help">Recolor listings by a metric to spot patterns; Default restores the original style.</p><div class="cb-btns" id="cb-btns"></div>`;
+        content.appendChild(cb);
+        const METRICS=[{id:"price",label:"Price"},{id:"sqft",label:"Sq ft"},{id:"beds",label:"Beds"},{id:null,label:"Default"}];
+        async function colorBy(attr,btn){[...cb.querySelectorAll(".cb-btn")].forEach((x)=>x.classList.remove("on"));btn.classList.add("on");
+          if(!attr){await felt.setLayerStyle({id:pid,style:baseStyle});return;}
+          await felt.setLayerStyle({id:pid,style:{type:"numeric",config:{numericAttribute:attr,steps:{type:"quantiles",count:5}},paint:{color:COLORS,size:6,opacity:0.9,strokeColor:"#ffffff",strokeWidth:0.4}}});}
+        METRICS.forEach((m,i)=>{const b=el("button","cb-btn"+(i===METRICS.length-1?" on":""));b.type="button";b.textContent=m.label;b.setAttribute("aria-label",m.id?`Color listings by ${m.label}`:"Restore default style");b.addEventListener("click",()=>colorBy(m.id,b));cb.querySelector("#cb-btns").appendChild(b);});
 
         // Legend
         const lg=el("div","block");lg.innerHTML=`<p class="block-title">Legend</p><div class="legend"><div class="legend-row"><span class="legend-sw" style="background:var(--accent)"></span>Listings</div></div>`;content.appendChild(lg);
