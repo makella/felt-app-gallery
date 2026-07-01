@@ -1,5 +1,14 @@
 [
   {
+    "slug": "santa-barbara-fire-story",
+    "title": "Within Reach? — A Fire Coverage Story",
+    "description": "A guided story map: seven beats walk from \"85% covered\" to the six uncovered zones, the 22 where risk stacks up, and five candidate station sites — live stats per beat, viewport choreography, honest caveats in the narrative.",
+    "map_url": "https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC",
+    "author": "makella",
+    "published_at": "2026-06-15",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-story/ — add an eighth beat about social vulnerability once the SVI join data step is done."
+  },
+  {
     "slug": "baltimore-explorer",
     "title": "Baltimore Real Estate Explorer",
     "description": "Happy-path explorer plus two custom buyer tools added via remix: an affordability calculator that filters listings to a monthly budget + down payment, and a color-by-metric live restyle (price / sqft / beds). Demonstrates the custom-behavior path — described functionality, not just catalog blocks.",
