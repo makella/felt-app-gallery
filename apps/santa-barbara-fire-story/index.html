@@ -5,92 +5,131 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Within Reach? — A Fire Coverage Story</title>
     <style>
-      .app {
-        --bg: #f6f7f9; --card: #ffffff; --border: #e4e7ec; --text: #101828;
-        --text-secondary: #475467; --text-muted: #667085; --accent: #d12b2b;
-        --accent-ui: #d12b2b; --focus: #1d4ed8; --radius: 12px;
-        display: flex; height: 100vh; color: var(--text);
-        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        -webkit-font-smoothing: antialiased;
-      }
-      .app[data-theme="dark"] {
-        --bg: #0f172a; --card: #1e293b; --border: #334155; --text: #f1f5f9;
-        --text-secondary: #cbd5e1; --text-muted: #94a3b8; --accent-ui: #f87171; --focus: #93c5fd;
+      :root {
+        --bg: #f6f7f9; --card: rgba(255, 255, 255, 0.96); --border: #e4e7ec;
+        --text: #101828; --text-secondary: #475467; --text-muted: #667085;
+        --accent: #d12b2b; --focus: #1d4ed8;
+        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       }
       * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; }
+      html, body { margin: 0; }
+      body { font-family: var(--sans); color: var(--text); background: var(--bg); }
       :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
 
-      .panel {
-        width: 408px; flex: none; display: flex; flex-direction: column;
-        background: var(--bg); border-right: 1px solid var(--border);
+      /* Fixed, full-bleed map — the story scrolls over it */
+      #map { position: fixed; inset: 0; z-index: 0; }
+
+      /* Scroll progress bar (Esri-style) */
+      #progress { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--accent); z-index: 40; }
+
+      /* ── Cover ── */
+      .cover {
+        position: relative; z-index: 10; min-height: 100vh;
+        display: flex; align-items: flex-end;
+        background: linear-gradient(180deg, rgba(16,24,40,0.35) 0%, rgba(16,24,40,0.15) 40%, rgba(16,24,40,0.78) 100%);
+        pointer-events: none;
       }
-      #map { flex: 1; min-width: 50%; }
-      .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ui); margin: 0 0 6px; }
-      .head { padding: 22px 24px 0; }
-      .head h1 { font-size: 21px; letter-spacing: -0.02em; margin: 0; line-height: 1.25; }
-      .head .sub { font-size: 12.5px; color: var(--text-muted); margin: 6px 0 0; }
-      .beat { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; }
-      .beat-title { font-size: 17px; font-weight: 650; line-height: 1.3; margin: 0 0 10px; }
-      .beat-body { font-size: 14px; line-height: 1.55; color: var(--text-secondary); margin: 0 0 18px; }
-      .callout {
-        background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent-ui);
-        border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+      .cover-inner { max-width: 880px; padding: 0 48px 12vh; color: #fff; pointer-events: auto; }
+      .cover .kicker {
+        font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+        color: #ffd7d7; margin: 0 0 14px;
       }
-      .callout .n { font-size: 30px; font-weight: 750; line-height: 1.1; font-variant-numeric: tabular-nums; }
-      .callout .l { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
-      .foot { padding: 14px 24px 20px; border-top: 1px solid var(--border); background: var(--card); }
-      .dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
-      .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: none; padding: 0; cursor: pointer; }
-      .dot.on { background: var(--accent-ui); }
-      .nav { display: flex; gap: 8px; }
-      .nav button {
-        flex: 1; font: inherit; font-size: 13.5px; font-weight: 550; padding: 9px 14px;
-        border-radius: 9px; cursor: pointer; border: 1px solid var(--border);
-        background: var(--card); color: var(--text);
+      .cover h1 {
+        font-family: var(--serif); font-weight: 700; letter-spacing: -0.015em;
+        font-size: clamp(44px, 7vw, 76px); line-height: 1.04; margin: 0 0 18px;
+        text-shadow: 0 2px 24px rgba(0,0,0,0.35);
       }
-      .nav button.primary { background: var(--accent-ui); border-color: var(--accent-ui); color: #fff; }
-      .nav button:disabled { opacity: 0.45; cursor: not-allowed; }
-      .hint { font-size: 11px; color: var(--text-muted); text-align: center; margin: 8px 0 0; }
-      .theme-btn { position: absolute; top: 14px; right: 14px; z-index: 5; font: inherit; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; }
-      .skeleton { height: 68px; border-radius: var(--radius); background: var(--border); animation: pulse 1.4s ease-in-out infinite; }
-      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-      @media (max-width: 768px) {
-        .app { flex-direction: column; }
-        #map { min-height: 44vh; order: -1; }
-        .panel { width: auto; border-right: none; border-top: 1px solid var(--border); }
+      .cover .dek { font-size: clamp(17px, 2vw, 21px); line-height: 1.5; max-width: 34em; margin: 0 0 10px; color: rgba(255,255,255,0.92); }
+      .cover .byline { font-size: 13px; color: rgba(255,255,255,0.75); margin: 0 0 40px; }
+      .scroll-cue { font-size: 13px; color: rgba(255,255,255,0.9); display: inline-flex; align-items: center; gap: 8px; }
+      .scroll-cue .arrow { display: inline-block; animation: bob 1.6s ease-in-out infinite; }
+      @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+      /* ── Sidecar: narrative cards scroll over the map ── */
+      .story { position: relative; z-index: 10; pointer-events: none; }
+      .beat {
+        pointer-events: auto;
+        width: min(480px, calc(100vw - 40px));
+        margin: 0 0 78vh 5vw;
+        background: var(--card); backdrop-filter: blur(6px);
+        border: 1px solid var(--border); border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(16,24,40,0.08), 0 16px 48px rgba(16,24,40,0.14);
+        padding: 26px 28px;
+        opacity: 0.55; transform: translateY(10px);
+        transition: opacity 0.45s ease, transform 0.45s ease;
+      }
+      .beat.active { opacity: 1; transform: none; }
+      .beat .chip {
+        display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+      }
+      .beat h2 { font-family: var(--serif); font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 12px; }
+      .beat p { font-size: 15.5px; line-height: 1.62; color: var(--text-secondary); margin: 0; }
+      .beat .stat { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+      .beat .stat .n { font-family: var(--serif); font-size: 46px; font-weight: 700; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+      .beat .stat .l { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+      .first-beat { margin-top: 14vh; }
+
+      /* ── Credits ── */
+      .credits {
+        position: relative; z-index: 10; min-height: 60vh;
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, rgba(16,24,40,0) 0%, rgba(16,24,40,0.85) 55%, rgba(16,24,40,0.95) 100%);
+        pointer-events: none;
+      }
+      .credits-inner { text-align: center; color: rgba(255,255,255,0.9); padding: 15vh 24px 10vh; pointer-events: auto; max-width: 640px; }
+      .credits-inner h2 { font-family: var(--serif); font-size: 30px; margin: 0 0 12px; color: #fff; }
+      .credits-inner p { font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.75); margin: 0 0 18px; }
+      .credits-inner a { color: #ffd7d7; }
+      .hint {
+        position: fixed; bottom: 14px; right: 16px; z-index: 30;
+        font-size: 11.5px; color: var(--text-secondary); background: var(--card);
+        border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
+        box-shadow: 0 2px 8px rgba(16,24,40,0.1);
+        opacity: 0; transition: opacity 0.4s ease; pointer-events: none;
+      }
+      .hint.show { opacity: 1; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .beat { transition: none; transform: none; }
+        .scroll-cue .arrow { animation: none; }
+        html { scroll-behavior: auto; }
+      }
+      @media (max-width: 700px) {
+        .cover-inner { padding: 0 22px 14vh; }
+        .beat { margin-left: auto; margin-right: auto; }
       }
     </style>
   </head>
   <body>
-    <div class="app" id="app" data-theme="light">
-      <aside class="panel">
-        <div class="head">
-          <p class="kicker">A guided story · Santa Barbara County</p>
-          <h1>Within reach?</h1>
-          <p class="sub">What fire-station coverage looks like for 342 evacuation zones — and where a new station would matter most.</p>
-        </div>
-        <div class="beat">
-          <h2 class="beat-title" id="b-title">Loading the map…</h2>
-          <div class="beat-body" id="b-body"><div class="skeleton"></div></div>
-          <div class="callout" id="b-callout" hidden>
-            <div class="n" id="b-num">—</div>
-            <div class="l" id="b-label"></div>
-          </div>
-        </div>
-        <div class="foot">
-          <div class="dots" id="dots" role="tablist" aria-label="Story progress"></div>
-          <div class="nav">
-            <button type="button" id="prev">← Previous</button>
-            <button type="button" id="next" class="primary">Next →</button>
-          </div>
-          <p class="hint">Use ← → arrow keys to navigate</p>
-        </div>
-      </aside>
-      <div id="map"></div>
-      <button class="theme-btn" id="theme" aria-label="Toggle light/dark theme">◐</button>
-    </div>
+    <div id="map" aria-hidden="true"></div>
+    <div id="progress" role="presentation"></div>
+    <p class="hint" id="hint">Drag to pan · ⌘/Ctrl + scroll to zoom the map</p>
+
+    <header class="cover" id="cover">
+      <div class="cover-inner">
+        <p class="kicker">A guided story · Santa Barbara County</p>
+        <h1>Within reach?</h1>
+        <p class="dek">Santa Barbara County rates 342 evacuation zones by how well today's fire stations can cover them. Most are fine. Some are not — and five places could change that.</p>
+        <p class="byline">Built from the Santa Barbara Data Explorer map · Felt</p>
+        <span class="scroll-cue">Scroll to begin <span class="arrow">↓</span></span>
+      </div>
+    </header>
+
+    <main class="story" id="story"></main>
+
+    <footer class="credits">
+      <div class="credits-inner">
+        <h2>A screen, not a siting study</h2>
+        <p>Hazard inputs are broad yes/no overlays; social vulnerability isn't factored in yet; candidate sites are a coverage heuristic — not a response-time or population-weighted model. Treat this as the start of the conversation, pointed somewhere specific.</p>
+        <p>
+          <a href="https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-gaps-v2/">Explore the data in the gap explorer</a>
+          &nbsp;·&nbsp;
+          <a href="https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC" target="_blank" rel="noreferrer">Open the source map on Felt</a>
+        </p>
+      </div>
+    </footer>
 
     <script type="module">
       import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
@@ -98,108 +137,135 @@
       const CONFIG = { mapId: "bXK9BCeAzTTijymyBtzGEGC" };
       const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-      // ---- The beats: each declares its FULL map state (order-independent) ----
-      // viewport coords chosen from the map's geography; stats computed live.
       const FULL = { center: { latitude: 34.62, longitude: -120.0 }, zoom: 8.6 };
       const COAST = { center: { latitude: 34.46, longitude: -119.78 }, zoom: 10.2 };
       const BEATS = [
         {
+          chip: "Part 1 · The question",
           title: "Can every neighborhood be reached in time?",
-          body: "Santa Barbara County divides into evacuation zones — the unit emergency planners think in. This map rates every zone by how well today's fire-station response areas cover it. Step through to see where coverage holds, where it thins, and what could close the gaps.",
+          body: "Santa Barbara County divides into evacuation zones — the unit emergency planners think in. This map rates every zone by how well today's fire-station response areas cover it. Keep scrolling to see where coverage holds, where it thins, and what could close the gaps.",
           viewport: FULL, filters: null, showSuggested: false,
           stat: { filters: null, label: "evacuation zones evaluated" },
         },
         {
+          chip: "Part 2 · The good news",
           title: "Most of the county is within reach",
-          body: "The good news first: 85% of zones sit comfortably inside an existing station's response area. For most residents, help is close.",
+          body: "85% of zones sit comfortably inside an existing station's response area. For most residents, help is close.",
           viewport: FULL, filters: ["coverage", "eq", "Good"], showSuggested: false,
-          stat: { filters: ["coverage", "eq", "Good"], label: "zones with good coverage (85%)" },
+          stat: { filters: ["coverage", "eq", "Good"], label: "zones with good coverage — 85%" },
         },
         {
+          chip: "Part 3 · The gaps",
           title: "But 51 zones are not",
           body: "Filter to the zones rated Moderate or Poor and a pattern appears: the under-covered zones aren't scattered randomly — they cluster. These are the places where response times stretch.",
           viewport: FULL, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: false,
           stat: { filters: ["coverage", "in", ["Poor", "Moderate"]], label: "zones under-covered today" },
         },
         {
+          chip: "Part 4 · The core problem",
           title: "Six are effectively uncovered",
-          body: "Six zones rate Poor — outside every station's response area. If a fast-moving fire starts here, coverage isn't thin; it's absent. This is the core of the problem.",
+          body: "Six zones rate Poor — outside every station's response area. If a fast-moving fire starts here, coverage isn't thin; it's absent.",
           viewport: COAST, filters: ["coverage", "eq", "Poor"], showSuggested: false,
           stat: { filters: ["coverage", "eq", "Poor"], label: "zones with no effective coverage" },
         },
         {
+          chip: "Part 5 · Compounding risk",
           title: "Where the risk stacks up",
           body: "Now add hazard: keep the under-covered zones and show only those that also sit in a very-high fire-hazard area. These zones combine the worst of both — hard to reach and likely to burn.",
           viewport: FULL, filters: [["coverage", "in", ["Poor", "Moderate"]], "and", ["fire_very_high", "eq", 1]], showSuggested: false,
           stat: { filters: [["coverage", "in", ["Poor", "Moderate"]], "and", ["fire_very_high", "eq", 1]], label: "under-covered zones in very-high fire hazard" },
         },
         {
+          chip: "Part 6 · A way forward",
           title: "Five candidate sites could close the gaps",
-          body: "The analysis proposes five candidate locations for a new station (the yellow markers), ranked by how many under-covered zones each would touch — the best touches six. One honest caveat: these are coverage heuristics from a hex-grid screen, not a response-time or population-weighted siting model.",
+          body: "The analysis proposes five candidate locations for a new station — the yellow markers now on the map — ranked by how many under-covered zones each would touch. The best touches six. One honest caveat: these are coverage heuristics from a hex-grid screen, not a response-time or population-weighted siting model.",
           viewport: { center: { latitude: 34.5, longitude: -119.95 }, zoom: 9.3 }, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: true,
-          stat: { fixed: 5, label: "candidate sites — best touches 6 zones" },
-        },
-        {
-          title: "A screening view — and a starting point",
-          body: "This story is a screen, not a siting study: hazard inputs are broad yes/no overlays, and social vulnerability isn't factored in yet. But it points the conversation somewhere specific — six uncovered zones and five places a station could go. Explore the data yourself in the companion gap-explorer app.",
-          viewport: FULL, filters: null, showSuggested: true,
-          stat: { filters: null, label: "zones — explore them in the gap explorer" },
+          stat: { fixed: 5, label: "candidate sites — the best touches 6 zones" },
         },
       ];
 
       const $ = (id) => document.getElementById(id);
       let felt, evacId, suggestedId;
-      let current = 0;
-      let animating = false;
-      let renderSeq = 0;
+      let activeIndex = -1;
+      let applySeq = 0;
 
-      async function renderBeat(index) {
-        const seq = ++renderSeq;
-        current = Math.max(0, Math.min(BEATS.length - 1, index));
-        const beat = BEATS[current];
+      // Build the beat cards
+      const story = $("story");
+      BEATS.forEach((beat, i) => {
+        const card = document.createElement("article");
+        card.className = "beat" + (i === 0 ? " first-beat" : "");
+        card.id = `beat-${i}`;
+        card.innerHTML = `
+          <span class="chip">${esc(beat.chip)}</span>
+          <h2>${esc(beat.title)}</h2>
+          <p>${esc(beat.body)}</p>
+          <div class="stat"><div class="n" id="stat-n-${i}">…</div><div class="l">${esc(beat.stat.label)}</div></div>`;
+        story.appendChild(card);
+      });
 
-        // narrative
-        $("b-title").textContent = beat.title;
-        $("b-body").textContent = beat.body;
-        $("prev").disabled = current === 0;
-        $("next").textContent = current === BEATS.length - 1 ? "Start over ↺" : "Next →";
-        [...$("dots").children].forEach((d, i) => d.classList.toggle("on", i === current));
-        location.hash = `beat-${current + 1}`;
+      async function applyBeat(index) {
+        if (index === activeIndex || !felt) return;
+        activeIndex = index;
+        const seq = ++applySeq;
+        const beat = BEATS[index];
 
-        // full map state (order-independent)
+        document.querySelectorAll(".beat").forEach((el, i) => el.classList.toggle("active", i === index));
+
         await felt.setLayerFilters({ layerId: evacId, filters: beat.filters });
         if (suggestedId) {
           await felt.setLayerVisibility(beat.showSuggested ? { show: [suggestedId] } : { hide: [suggestedId] });
         }
+        if (seq !== applySeq) return;
+        await felt.setViewport(beat.viewport);
 
-        // viewport — never mid-animation
-        if (!animating) {
-          animating = true;
-          await felt.setViewport(beat.viewport);
-          setTimeout(() => { animating = false; }, 900);
-        }
-
-        // live callout stat
-        const co = $("b-callout");
-        if (beat.stat) {
-          co.hidden = false;
-          if (beat.stat.fixed != null) {
-            $("b-num").textContent = String(beat.stat.fixed);
-          } else {
-            $("b-num").textContent = "…";
-            const res = await felt.getAggregates({ layerId: evacId, filters: beat.stat.filters, aggregation: { methods: ["count"] } });
-            if (seq !== renderSeq) return; // superseded by a newer beat
-            $("b-num").textContent = (res.count ?? 0).toLocaleString();
-          }
-          $("b-label").textContent = beat.stat.label;
-        } else {
-          co.hidden = true;
+        const numEl = $(`stat-n-${index}`);
+        if (beat.stat.fixed != null) {
+          numEl.textContent = String(beat.stat.fixed);
+        } else if (numEl.textContent === "…") {
+          const res = await felt.getAggregates({ layerId: evacId, filters: beat.stat.filters, aggregation: { methods: ["count"] } });
+          if (seq !== applySeq) return;
+          numEl.textContent = (res.count ?? 0).toLocaleString();
         }
       }
 
+      function initScrollytelling() {
+        // A card crossing the middle of the viewport becomes the active beat.
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                const i = parseInt(entry.target.id.split("-")[1], 10);
+                void applyBeat(i);
+              }
+            }
+          },
+          { rootMargin: "-40% 0px -45% 0px", threshold: 0 }
+        );
+        document.querySelectorAll(".beat").forEach((el) => observer.observe(el));
+
+        // progress bar + map-interaction hint after the cover
+        const progress = $("progress");
+        const hint = $("hint");
+        addEventListener("scroll", () => {
+          const max = document.documentElement.scrollHeight - innerHeight;
+          progress.style.width = `${max > 0 ? (scrollY / max) * 100 : 0}%`;
+          hint.classList.toggle("show", scrollY > innerHeight * 0.6 && scrollY < max - innerHeight * 0.4);
+        }, { passive: true });
+
+        // keyboard: arrows jump between beats
+        document.addEventListener("keydown", (e) => {
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+          const next = Math.max(0, Math.min(BEATS.length - 1, activeIndex + (e.key === "ArrowRight" ? 1 : -1)));
+          document.getElementById(`beat-${next}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+
       async function init() {
+        // cooperativeGestures: plain scroll drives the STORY; ⌘/Ctrl+scroll zooms
+        // the map; drag still pans. This is what makes scrollytelling coexist
+        // with a live, interactive map.
         felt = await Felt.embed($("map"), CONFIG.mapId, {
-          uiControls: { showLegend: false, cooperativeGestures: false },
+          uiControls: { showLegend: false, cooperativeGestures: true },
         });
 
         const layers = (await felt.getLayers()).filter(Boolean);
@@ -209,43 +275,22 @@
         const areas = layers.find((l) => l.name === "Fire Station Response Areas");
         evacId = evac.id; suggestedId = suggested?.id;
 
-        // Curate: only the story's layers on; suggested sites enter at their beat.
         const keep = new Set([evac?.id, stations?.id, areas?.id].filter(Boolean));
         await felt.setLayerVisibility({
           show: [...keep],
           hide: layers.filter((l) => !keep.has(l.id)).map((l) => l.id),
         });
+        await felt.setViewport(FULL);
 
-        // dots + nav + keyboard
-        BEATS.forEach((_, i) => {
-          const d = document.createElement("button");
-          d.className = "dot"; d.type = "button";
-          d.setAttribute("role", "tab");
-          d.setAttribute("aria-label", `Go to part ${i + 1} of ${BEATS.length}`);
-          d.addEventListener("click", () => renderBeat(i));
-          $("dots").appendChild(d);
-        });
-        $("prev").addEventListener("click", () => renderBeat(current - 1));
-        $("next").addEventListener("click", () => renderBeat(current === BEATS.length - 1 ? 0 : current + 1));
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "ArrowRight") renderBeat(current + 1);
-          if (e.key === "ArrowLeft") renderBeat(current - 1);
-        });
-        $("theme").addEventListener("click", () => {
-          const app = $("app");
-          app.dataset.theme = app.dataset.theme === "light" ? "dark" : "light";
-        });
-
-        // deep link
-        const m = location.hash.match(/beat-(\d+)/);
-        await renderBeat(m ? parseInt(m[1], 10) - 1 : 0);
+        initScrollytelling();
+        void applyBeat(0);
         window.__ready = true;
       }
 
       init().catch((err) => {
         console.error("SDK failed:", err);
-        $("b-title").textContent = "Could not load the map.";
-        $("b-body").innerHTML = `View it directly on Felt: <a href="https://felt.com/map/${CONFIG.mapId}" target="_blank" rel="noreferrer">felt.com/map/${esc(CONFIG.mapId)}</a>`;
+        const cover = document.querySelector(".cover-inner .dek");
+        if (cover) cover.innerHTML = `Could not load the map — view it directly on <a style="color:#ffd7d7" href="https://felt.com/map/${esc(CONFIG.mapId)}" target="_blank" rel="noreferrer">Felt</a>.`;
       });
     </script>
   </body>

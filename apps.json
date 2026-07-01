@@ -2,11 +2,12 @@
   {
     "slug": "santa-barbara-fire-story",
     "title": "Within Reach? — A Fire Coverage Story",
-    "description": "A guided story map: seven beats walk from \"85% covered\" to the six uncovered zones, the 22 where risk stacks up, and five candidate station sites — live stats per beat, viewport choreography, honest caveats in the narrative.",
+    "description": "Esri-style scrollytelling: full-bleed cover, narrative cards scroll over a fixed live map, each beat flies/filters the map with a live stat (342 → 291 → 51 → 6 → 22 → 5 candidate sites). Drag pans; ⌘/Ctrl+scroll zooms; arrows jump beats.",
     "map_url": "https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC",
     "author": "makella",
     "published_at": "2026-06-15",
-    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-story/ — add an eighth beat about social vulnerability once the SVI join data step is done."
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-story/ — add an eighth beat about social vulnerability once the SVI join data step is done.",
+    "updated_at": "2026-06-15"
   },
   {
     "slug": "baltimore-explorer",
