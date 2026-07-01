@@ -137,55 +137,66 @@
       const CONFIG = { mapId: "bXK9BCeAzTTijymyBtzGEGC" };
       const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-      const FULL = { center: { latitude: 34.62, longitude: -120.0 }, zoom: 8.6 };
+      const FULL = { center: { latitude: 34.65, longitude: -120.15 }, zoom: 9.0 };
+      const SOUTH = { center: { latitude: 34.55, longitude: -119.95 }, zoom: 9.7 };
       const COAST = { center: { latitude: 34.46, longitude: -119.78 }, zoom: 10.2 };
+      // Each beat declares its FULL map state: filters + zone styling + which
+      // context layers are on. The map must visibly TRANSFORM per beat — that's
+      // the story connection (not just a filter count changing).
+      const zoneStyle = (paint) => ({ type: "simple", paint: { strokeColor: "#ffffff", strokeWidth: 0.6, opacity: 0.92, ...paint } });
       const BEATS = [
         {
-          chip: "Part 1 · The question",
+          chip: "Part 1 \u00b7 The question",
           title: "Can every neighborhood be reached in time?",
-          body: "Santa Barbara County divides into evacuation zones — the unit emergency planners think in. This map rates every zone by how well today's fire-station response areas cover it. Keep scrolling to see where coverage holds, where it thins, and what could close the gaps.",
-          viewport: FULL, filters: null, showSuggested: false,
+          body: "Santa Barbara County divides into evacuation zones \u2014 the shaded shapes on this map. The blue circles are today's fire-station response areas. The question of this story: does every zone fall inside one? Keep scrolling.",
+          viewport: FULL, filters: null, showSuggested: false, showStations: false, showAreas: true,
+          style: zoneStyle({ color: "#64748b", opacity: 0.55 }),
           stat: { filters: null, label: "evacuation zones evaluated" },
         },
         {
-          chip: "Part 2 · The good news",
+          chip: "Part 2 \u00b7 The good news",
           title: "Most of the county is within reach",
-          body: "85% of zones sit comfortably inside an existing station's response area. For most residents, help is close.",
-          viewport: FULL, filters: ["coverage", "eq", "Good"], showSuggested: false,
-          stat: { filters: ["coverage", "eq", "Good"], label: "zones with good coverage — 85%" },
+          body: "The zones now glowing green are the well-covered ones \u2014 85% of the county, each sitting comfortably inside a blue response circle. For most residents, help is close.",
+          viewport: FULL, filters: ["coverage", "eq", "Good"], showSuggested: false, showStations: false, showAreas: true,
+          style: zoneStyle({ color: "#2d9e2d", opacity: 0.8 }),
+          stat: { filters: ["coverage", "eq", "Good"], label: "zones with good coverage \u2014 85%" },
         },
         {
-          chip: "Part 3 · The gaps",
+          chip: "Part 3 \u00b7 The gaps",
           title: "But 51 zones are not",
-          body: "Filter to the zones rated Moderate or Poor and a pattern appears: the under-covered zones aren't scattered randomly — they cluster. These are the places where response times stretch.",
-          viewport: FULL, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: false,
+          body: "Strip away the covered zones and the circles, and this is what remains \u2014 amber for moderate gaps, red for the worst. They aren't scattered: one cluster sits around Orcutt in the north, the other strings along the Goleta\u2013Santa Barbara coast.",
+          viewport: SOUTH, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: false, showStations: false, showAreas: false,
+          style: { type: "categorical", config: { categoricalAttribute: "coverage", categories: ["Poor", "Moderate"] }, paint: { color: ["#d12b2b", "#e8900a"], strokeColor: "#ffffff", strokeWidth: 0.8, opacity: 0.95 } },
           stat: { filters: ["coverage", "in", ["Poor", "Moderate"]], label: "zones under-covered today" },
         },
         {
-          chip: "Part 4 · The core problem",
+          chip: "Part 4 \u00b7 The core problem",
           title: "Six are effectively uncovered",
-          body: "Six zones rate Poor — outside every station's response area. If a fast-moving fire starts here, coverage isn't thin; it's absent.",
-          viewport: COAST, filters: ["coverage", "eq", "Poor"], showSuggested: false,
+          body: "Everything else is gone now. The six shapes burning red are the zones rated Poor \u2014 outside every station's response area. If a fast-moving fire starts in one of these, coverage isn't thin; it's absent.",
+          viewport: COAST, filters: ["coverage", "eq", "Poor"], showSuggested: false, showStations: false, showAreas: false,
+          style: zoneStyle({ color: "#d12b2b", strokeColor: "#7f1d1d", strokeWidth: 2, opacity: 1 }),
           stat: { filters: ["coverage", "eq", "Poor"], label: "zones with no effective coverage" },
         },
         {
-          chip: "Part 5 · Compounding risk",
+          chip: "Part 5 \u00b7 Compounding risk",
           title: "Where the risk stacks up",
-          body: "Now add hazard: keep the under-covered zones and show only those that also sit in a very-high fire-hazard area. These zones combine the worst of both — hard to reach and likely to burn.",
-          viewport: FULL, filters: [["coverage", "in", ["Poor", "Moderate"]], "and", ["fire_very_high", "eq", 1]], showSuggested: false,
+          body: "Now keep the under-covered zones \u2014 but only those that ALSO sit in a very-high fire-hazard area. The dark red shapes combine the worst of both: hard to reach, and likely to burn.",
+          viewport: SOUTH, filters: [["coverage", "in", ["Poor", "Moderate"]], "and", ["fire_very_high", "eq", 1]], showSuggested: false, showStations: false, showAreas: false,
+          style: zoneStyle({ color: "#7f1d1d", strokeColor: "#450a0a", strokeWidth: 1.4, opacity: 1 }),
           stat: { filters: [["coverage", "in", ["Poor", "Moderate"]], "and", ["fire_very_high", "eq", 1]], label: "under-covered zones in very-high fire hazard" },
         },
         {
-          chip: "Part 6 · A way forward",
+          chip: "Part 6 \u00b7 A way forward",
           title: "Five candidate sites could close the gaps",
-          body: "The analysis proposes five candidate locations for a new station — the yellow markers now on the map — ranked by how many under-covered zones each would touch. The best touches six. One honest caveat: these are coverage heuristics from a hex-grid screen, not a response-time or population-weighted siting model.",
-          viewport: { center: { latitude: 34.5, longitude: -119.95 }, zoom: 9.3 }, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: true,
-          stat: { fixed: 5, label: "candidate sites — the best touches 6 zones" },
+          body: "The yellow markers just appeared: five candidate locations for a new station, placed against the gaps they would serve \u2014 the best touches six under-covered zones. One honest caveat: these are coverage heuristics from a hex-grid screen, not a response-time or population-weighted siting model.",
+          viewport: { center: { latitude: 34.5, longitude: -119.95 }, zoom: 9.3 }, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: true, showStations: false, showAreas: true,
+          style: { type: "categorical", config: { categoricalAttribute: "coverage", categories: ["Poor", "Moderate"] }, paint: { color: ["#d12b2b", "#e8900a"], strokeColor: "#ffffff", strokeWidth: 0.8, opacity: 0.9 } },
+          stat: { fixed: 5, label: "candidate sites \u2014 the best touches 6 zones" },
         },
       ];
 
       const $ = (id) => document.getElementById(id);
-      let felt, evacId, suggestedId;
+      let felt, evacId, suggestedId, stationsId, areasId;
       let activeIndex = -1;
       let applySeq = 0;
 
@@ -212,9 +223,12 @@
         document.querySelectorAll(".beat").forEach((el, i) => el.classList.toggle("active", i === index));
 
         await felt.setLayerFilters({ layerId: evacId, filters: beat.filters });
-        if (suggestedId) {
-          await felt.setLayerVisibility(beat.showSuggested ? { show: [suggestedId] } : { hide: [suggestedId] });
-        }
+        await felt.setLayerStyle({ id: evacId, style: beat.style });
+        const show = [], hide = [];
+        if (suggestedId) (beat.showSuggested ? show : hide).push(suggestedId);
+        if (stationsId) (beat.showStations ? show : hide).push(stationsId);
+        if (areasId) (beat.showAreas ? show : hide).push(areasId);
+        if (show.length || hide.length) await felt.setLayerVisibility({ show, hide });
         if (seq !== applySeq) return;
         await felt.setViewport(beat.viewport);
 
@@ -273,9 +287,9 @@
         const suggested = layers.find((l) => l.name === "Suggested New Fire Station Locations");
         const stations = layers.find((l) => l.name === "Fire Stations");
         const areas = layers.find((l) => l.name === "Fire Station Response Areas");
-        evacId = evac.id; suggestedId = suggested?.id;
+        evacId = evac.id; suggestedId = suggested?.id; stationsId = stations?.id; areasId = areas?.id;
 
-        const keep = new Set([evac?.id, stations?.id, areas?.id].filter(Boolean));
+        const keep = new Set([evac?.id, areas?.id].filter(Boolean));
         await felt.setLayerVisibility({
           show: [...keep],
           hide: layers.filter((l) => !keep.has(l.id)).map((l) => l.id),
