@@ -71,6 +71,20 @@
       .beat .stat .l { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
       .first-beat { margin-top: 14vh; }
 
+      /* ── Full-bleed image interlude ── */
+      .interlude {
+        position: relative; z-index: 10; min-height: 92vh; margin-bottom: 60vh;
+        background-size: cover; background-position: center;
+        display: flex; align-items: flex-end; pointer-events: none;
+      }
+      .interlude::after {
+        content: ""; position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(16,24,40,0.1) 40%, rgba(16,24,40,0.75) 100%);
+      }
+      .interlude-caption { position: relative; z-index: 1; color: #fff; padding: 0 48px 7vh; max-width: 760px; pointer-events: auto; }
+      .interlude-caption h2 { font-family: var(--serif); font-size: clamp(28px, 4vw, 44px); margin: 0 0 8px; text-shadow: 0 2px 16px rgba(0,0,0,0.5); }
+      .interlude-caption p { font-size: 14px; line-height: 1.5; color: rgba(255,255,255,0.85); margin: 0; }
+
       /* ── Credits ── */
       .credits {
         position: relative; z-index: 10; min-height: 60vh;
@@ -126,7 +140,7 @@
         <p>
           <a href="https://makella.github.io/felt-app-gallery/apps/santa-barbara-fire-gaps-v2/">Explore the data in the gap explorer</a>
           &nbsp;·&nbsp;
-          <a href="https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC" target="_blank" rel="noreferrer">Open the source map on Felt</a>
+          <a href="https://felt.com/map/Santa-Barbara-CA-Data-Explorer-bXK9BCeAzTTijymyBtzGEGC" target="_blank" rel="noreferrer">Open the source map on Felt</a><br /><span style="font-size:12px;opacity:0.7">Interlude photo: Thomas Fire, Ventura 2017 \u2014 Wikimedia Commons</span>
         </p>
       </div>
     </footer>
@@ -175,6 +189,7 @@
           body: "Everything else is gone now. The six shapes burning red are the zones rated Poor \u2014 outside every station's response area. If a fast-moving fire starts in one of these, coverage isn't thin; it's absent.",
           viewport: COAST, filters: ["coverage", "eq", "Poor"], showSuggested: false, showStations: false, showAreas: false,
           style: zoneStyle({ color: "#d12b2b", strokeColor: "#7f1d1d", strokeWidth: 2, opacity: 1 }),
+          annotations: [{ type: "Text", text: "THE SIX UNCOVERED ZONES", position: [-119.62, 34.33], color: "#d12b2b", style: "caps" }],
           stat: { filters: ["coverage", "eq", "Poor"], label: "zones with no effective coverage" },
         },
         {
@@ -191,14 +206,39 @@
           body: "The yellow markers just appeared: five candidate locations for a new station, placed against the gaps they would serve \u2014 the best touches six under-covered zones. One honest caveat: these are coverage heuristics from a hex-grid screen, not a response-time or population-weighted siting model.",
           viewport: { center: { latitude: 34.5, longitude: -119.95 }, zoom: 9.3 }, filters: ["coverage", "in", ["Poor", "Moderate"]], showSuggested: true, showStations: false, showAreas: true,
           style: { type: "categorical", config: { categoricalAttribute: "coverage", categories: ["Poor", "Moderate"] }, paint: { color: ["#d12b2b", "#e8900a"], strokeColor: "#ffffff", strokeWidth: 0.8, opacity: 0.9 } },
+          annotations: [{ type: "Text", text: "CANDIDATE SITES \u2193", position: [-119.95, 34.68], color: "#854d0e", style: "caps" }],
           stat: { fixed: 5, label: "candidate sites \u2014 the best touches 6 zones" },
         },
       ];
+
+      const INTERLUDE_AFTER = 4; // full-bleed image between "risk" and "way forward"
+      const INTERLUDE = {
+        img: "https://commons.wikimedia.org/wiki/Special:FilePath/Thomas%20Fire%20Ventura%202017-12-04.jpg?width=1800",
+        title: "This is what's at stake",
+        caption: "The 2017 Thomas Fire burned from Ventura into Santa Barbara County \u2014 through terrain like the zones in this story. Photo: Wikimedia Commons.",
+      };
 
       const $ = (id) => document.getElementById(id);
       let felt, evacId, suggestedId, stationsId, areasId;
       let activeIndex = -1;
       let applySeq = 0;
+      let annotationIds = [];
+
+      async function clearAnnotations() {
+        const ids = annotationIds; annotationIds = [];
+        await Promise.all(ids.map((id) => felt.deleteElement(id).catch(() => undefined)));
+      }
+      async function placeAnnotations(beat, seq) {
+        if (!beat.annotations) return;
+        for (const a of beat.annotations) {
+          try {
+            const el = await felt.createElement(a);
+            if (seq !== applySeq) { if (el?.id) await felt.deleteElement(el.id).catch(() => undefined); return; }
+            if (el?.id) annotationIds.push(el.id);
+          } catch { /* annotation is decoration \u2014 never break the beat */ }
+        }
+        window.__annotations = annotationIds.length; // test hook
+      }
 
       // Build the beat cards
       const story = $("story");
@@ -212,6 +252,15 @@
           <p>${esc(beat.body)}</p>
           <div class="stat"><div class="n" id="stat-n-${i}">…</div><div class="l">${esc(beat.stat.label)}</div></div>`;
         story.appendChild(card);
+        if (i === INTERLUDE_AFTER) {
+          const inter = document.createElement("section");
+          inter.className = "interlude";
+          inter.style.backgroundImage = `url("${INTERLUDE.img}")`;
+          inter.setAttribute("role", "img");
+          inter.setAttribute("aria-label", INTERLUDE.caption);
+          inter.innerHTML = `<div class="interlude-caption"><h2>${esc(INTERLUDE.title)}</h2><p>${esc(INTERLUDE.caption)}</p></div>`;
+          story.appendChild(inter);
+        }
       });
 
       async function applyBeat(index) {
@@ -230,7 +279,9 @@
         if (areasId) (beat.showAreas ? show : hide).push(areasId);
         if (show.length || hide.length) await felt.setLayerVisibility({ show, hide });
         if (seq !== applySeq) return;
+        await clearAnnotations();
         await felt.setViewport(beat.viewport);
+        void placeAnnotations(beat, seq);
 
         const numEl = $(`stat-n-${index}`);
         if (beat.stat.fixed != null) {
