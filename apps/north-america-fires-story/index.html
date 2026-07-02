@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Burning Now — North America's Fire Season, Live</title>
+    <style>
+      :root {
+        --bg: #f6f7f9; --card: rgba(255, 255, 255, 0.96); --border: #e4e7ec;
+        --text: #101828; --text-secondary: #475467; --text-muted: #667085;
+        --accent: #d1500f; --focus: #1d4ed8;
+        --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body { font-family: var(--sans); color: var(--text); background: var(--bg); }
+      :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+      #map { position: fixed; inset: 0; z-index: 0; }
+      #progress { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: var(--accent); z-index: 40; }
+
+      .cover {
+        position: relative; z-index: 10; min-height: 100vh; display: flex; align-items: flex-end;
+        background: linear-gradient(180deg, rgba(24,16,10,0.38) 0%, rgba(24,16,10,0.16) 40%, rgba(24,16,10,0.8) 100%);
+        pointer-events: none;
+      }
+      .cover-inner { max-width: 880px; padding: 0 48px 12vh; color: #fff; pointer-events: auto; }
+      .cover .kicker { font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #ffd9c2; margin: 0 0 14px; }
+      .cover h1 { font-family: var(--serif); font-weight: 700; letter-spacing: -0.015em; font-size: clamp(44px, 7vw, 76px); line-height: 1.04; margin: 0 0 18px; text-shadow: 0 2px 24px rgba(0,0,0,0.4); }
+      .cover .dek { font-size: clamp(17px, 2vw, 21px); line-height: 1.5; max-width: 34em; margin: 0 0 10px; color: rgba(255,255,255,0.92); }
+      .cover .byline { font-size: 13px; color: rgba(255,255,255,0.75); margin: 0 0 40px; }
+      .scroll-cue { font-size: 13px; color: rgba(255,255,255,0.9); display: inline-flex; align-items: center; gap: 8px; }
+      .scroll-cue .arrow { display: inline-block; animation: bob 1.6s ease-in-out infinite; }
+      @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+      .story { position: relative; z-index: 10; pointer-events: none; }
+      .beat {
+        pointer-events: auto; width: min(480px, calc(100vw - 40px)); margin: 0 0 80vh 5vw;
+        background: var(--card); backdrop-filter: blur(6px);
+        border: 1px solid var(--border); border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(16,24,40,0.08), 0 16px 48px rgba(16,24,40,0.14);
+        padding: 26px 28px; opacity: 0.55; transform: translateY(10px);
+        transition: opacity 0.45s ease, transform 0.45s ease;
+      }
+      .beat.active { opacity: 1; transform: none; }
+      .beat .chip { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+      .beat h2 { font-family: var(--serif); font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 12px; }
+      .beat p { font-size: 15.5px; line-height: 1.62; color: var(--text-secondary); margin: 0; }
+      .beat .stat { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+      .beat .stat .n { font-family: var(--serif); font-size: 46px; font-weight: 700; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+      .beat .stat .l { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+      .first-beat { margin-top: 14vh; }
+      .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a; margin-right:6px; animation: pulse-dot 2s ease-in-out infinite; }
+      @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+      .credits {
+        position: relative; z-index: 10; min-height: 60vh; display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, rgba(24,16,10,0) 0%, rgba(24,16,10,0.85) 55%, rgba(24,16,10,0.95) 100%);
+        pointer-events: none;
+      }
+      .credits-inner { text-align: center; color: rgba(255,255,255,0.9); padding: 15vh 24px 10vh; pointer-events: auto; max-width: 660px; }
+      .credits-inner h2 { font-family: var(--serif); font-size: 30px; margin: 0 0 12px; color: #fff; }
+      .credits-inner p { font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.75); margin: 0 0 18px; }
+      .credits-inner a { color: #ffd9c2; }
+      .hint {
+        position: fixed; bottom: 14px; right: 16px; z-index: 30; font-size: 11.5px; color: var(--text-secondary);
+        background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
+        box-shadow: 0 2px 8px rgba(16,24,40,0.1); opacity: 0; transition: opacity 0.4s ease; pointer-events: none;
+      }
+      .hint.show { opacity: 1; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .beat { transition: none; transform: none; }
+        .scroll-cue .arrow, .live-dot { animation: none; }
+        html { scroll-behavior: auto; }
+      }
+      @media (max-width: 700px) {
+        .cover-inner { padding: 0 22px 14vh; }
+        .beat { margin-left: auto; margin-right: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map" aria-hidden="true"></div>
+    <div id="progress" role="presentation"></div>
+    <p class="hint" id="hint">Drag to pan · ⌘/Ctrl + scroll to zoom the map</p>
+
+    <header class="cover" id="cover">
+      <div class="cover-inner">
+        <p class="kicker"><span class="live-dot"></span>Live · updates with the map's data</p>
+        <h1>Burning now</h1>
+        <p class="dek">Hundreds of wildfires are active across North America at this moment. This story reads the live map — every number below is computed the moment you open it.</p>
+        <p class="byline">Built from the Current Fires map · Felt</p>
+        <span class="scroll-cue">Scroll to begin <span class="arrow">↓</span></span>
+      </div>
+    </header>
+
+    <main class="story" id="story"></main>
+
+    <footer class="credits">
+      <div class="credits-inner">
+        <h2>Live data, honest limits</h2>
+        <p>Numbers recompute on every view, but freshness depends on the map's source feeds (US: national incident reports; Canada: agency feeds). Only a minority of Canadian fires report a control status. The perimeter archive contains historical fires — this story shows only the footprint it can match by name. Smoke detection is satellite-derived and approximate.</p>
+        <p><a href="https://felt.com/map/Current-Fires-Ly1sNMMRT9BOrfNlB3Uy9B1B" target="_blank" rel="noreferrer">Open the live map on Felt</a></p>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+
+      const CONFIG = { mapId: "Ly1sNMMRT9BOrfNlB3Uy9B1B" };
+      const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      const n = (v) => (v == null || Number.isNaN(v) ? "—" : Math.round(v).toLocaleString());
+
+      const CONTINENT = { center: { latitude: 51, longitude: -105 }, zoom: 3.1 };
+      const WEST = { center: { latitude: 38.8, longitude: -111.8 }, zoom: 5.4 };
+      const NORTH = { center: { latitude: 60.5, longitude: -113 }, zoom: 4.4 };
+
+      // Beats: text can contain {slot} placeholders filled at runtime from live data.
+      const BEATS = [
+        {
+          chip: "Part 1 · Right now",
+          title: "North America is burning in {total} places",
+          body: "Every orange point is an active wildfire — {us} tracked in the United States, {ca} in Canada — at the moment you opened this page. Most are small. Some are not. Keep scrolling.",
+          state: "overview",
+          statLabel: "active wildfires right now",
+        },
+        {
+          chip: "Part 2 · The biggest",
+          title: "The largest U.S. fire right now: {usTopName}",
+          body: "The {usTopName} Fire in {usTopState} has burned {usTopAcres} acres — the largest active incident in the country as of this view. The shaded shape is its actual mapped perimeter.",
+          state: "usTop",
+          statLabel: "acres — largest active U.S. fire",
+        },
+        {
+          chip: "Part 3 · The pattern",
+          title: "The U.S. season lives in the interior West",
+          body: "Zoom out and the clustering is unmistakable: {usStatesLine}. Alaska has the most separate fires; the biggest burns concentrate in the Great Basin and Four Corners.",
+          state: "west",
+          statLabel: "total U.S. acres burning",
+        },
+        {
+          chip: "Part 4 · The other fire season",
+          title: "Canada's is bigger than the headline",
+          body: "Canada's {ca} active fires have burned {caAcres} acres — more than the U.S. total. The largest burns far from cities, in the boreal north near Wood Buffalo. Of the minority of fires reporting a control status, {caOOC} are listed out of control.",
+          state: "north",
+          statLabel: "hectares burning in Canada",
+        },
+        {
+          chip: "Part 5 · What travels",
+          title: "The smoke doesn't stay at the fire",
+          body: "Satellite-detected smoke plumes drift far beyond any fire line — over cities, across borders. This is how a fire a thousand miles away becomes your air quality problem.",
+          state: "smoke",
+          statLabel: "smoke plumes detected by satellite",
+        },
+        {
+          chip: "Part 6 · Keep watching",
+          title: "This page will be different tomorrow",
+          body: "Every number here recomputes from the live map. Come back after the next wind event and the biggest fire, the burned acreage — even where the smoke sits — will have moved.",
+          state: "overview",
+          statLabel: "active wildfires right now",
+        },
+      ];
+
+      const $ = (id) => document.getElementById(id);
+      let felt, usId, caId, perimId, smokeId, aqiId;
+      let live = {}; // filled at init from the live data
+      let activeIndex = -1, applySeq = 0, annotationIds = [];
+
+      const story = $("story");
+      BEATS.forEach((beat, i) => {
+        const card = document.createElement("article");
+        card.className = "beat" + (i === 0 ? " first-beat" : "");
+        card.id = `beat-${i}`;
+        card.innerHTML = `
+          <span class="chip">${esc(beat.chip)}</span>
+          <h2 id="title-${i}">${esc(beat.title)}</h2>
+          <p id="body-${i}">${esc(beat.body)}</p>
+          <div class="stat"><div class="n" id="stat-n-${i}">…</div><div class="l">${esc(beat.statLabel)}</div></div>`;
+        story.appendChild(card);
+      });
+
+      const fill = (tpl, slots) => tpl.replace(/\{(\w+)\}/g, (_, k) => (slots[k] != null ? slots[k] : "…"));
+      function renderSlots() {
+        BEATS.forEach((beat, i) => {
+          $(`title-${i}`).textContent = fill(beat.title, live);
+          $(`body-${i}`).textContent = fill(beat.body, live);
+        });
+      }
+
+      async function clearAnnotations() {
+        const ids = annotationIds; annotationIds = [];
+        await Promise.all(ids.map((id) => felt.deleteElement(id).catch(() => undefined)));
+      }
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      async function placeAnnotation(a, seq) {
+        try {
+          // Text elements are sized at creation zoom — wait for the fly-to to settle
+          await sleep(2600);
+          if (seq !== applySeq) return;
+          const el = await felt.createElement(a);
+          if (seq !== applySeq) { if (el?.id) await felt.deleteElement(el.id).catch(() => undefined); return; }
+          if (el?.id) annotationIds.push(el.id);
+        } catch { /* decoration only */ }
+      }
+
+      // Full map state per beat — order-independent.
+      async function applyState(state, seq) {
+        const showFires = { show: [usId, caId].filter(Boolean), hide: [] };
+        const vis = { show: [], hide: [] };
+        const on = (id) => id && vis.show.push(id);
+        const off = (id) => id && vis.hide.push(id);
+
+        if (state === "overview") {
+          on(usId); on(caId); off(perimId); off(smokeId); off(aqiId);
+          await felt.setLayerVisibility(vis);
+          await felt.setLayerFilters({ layerId: perimId, filters: null }).catch(() => undefined);
+          if (seq !== applySeq) return;
+          await felt.setViewport(CONTINENT);
+        } else if (state === "usTop") {
+          on(usId); off(caId); on(perimId); off(smokeId); off(aqiId);
+          // show ONLY the top fire's perimeter from the 38k archive
+          await felt.setLayerFilters({ layerId: perimId, filters: live.usTopName ? ["poly_IncidentName", "cn", live.usTopName] : null }).catch(() => undefined);
+          await felt.setLayerVisibility(vis);
+          if (seq !== applySeq) return;
+          if (live.usTopLat != null) {
+            await felt.setViewport({ center: { latitude: live.usTopLat, longitude: live.usTopLon }, zoom: 8.6 });
+            void placeAnnotation({ type: "Text", text: `${live.usTopName?.toUpperCase() ?? "LARGEST"} FIRE`, position: [live.usTopLon + 0.55, live.usTopLat + 0.18], color: "#b91c1c", style: "caps" }, seq);
+          }
+        } else if (state === "west") {
+          on(usId); off(caId); off(perimId); off(smokeId); off(aqiId);
+          await felt.setLayerVisibility(vis);
+          if (seq !== applySeq) return;
+          await felt.setViewport(WEST);
+        } else if (state === "north") {
+          off(usId); on(caId); off(perimId); off(smokeId); off(aqiId);
+          await felt.setLayerVisibility(vis);
+          if (seq !== applySeq) return;
+          await felt.setViewport(NORTH);
+          if (live.caTopLat != null) {
+            void placeAnnotation({ type: "Text", text: "LARGEST CANADIAN FIRE", position: [live.caTopLon + 2.4, live.caTopLat + 0.5], color: "#b91c1c", style: "caps" }, seq);
+          }
+        } else if (state === "smoke") {
+          on(usId); on(caId); on(smokeId); on(aqiId); off(perimId);
+          await felt.setLayerVisibility(vis);
+          if (seq !== applySeq) return;
+          await felt.setViewport(CONTINENT);
+        }
+      }
+
+      async function applyBeat(index) {
+        if (index === activeIndex || !felt) return;
+        activeIndex = index;
+        const seq = ++applySeq;
+        document.querySelectorAll(".beat").forEach((el, i) => el.classList.toggle("active", i === index));
+        await clearAnnotations();
+        await applyState(BEATS[index].state, seq);
+        if (seq !== applySeq) return;
+        const numEl = $(`stat-n-${index}`);
+        if (live.stats && live.stats[index] != null) numEl.textContent = live.stats[index];
+      }
+
+      function initScrollytelling() {
+        const observer = new IntersectionObserver((entries) => {
+          for (const e of entries) if (e.isIntersecting) void applyBeat(parseInt(e.target.id.split("-")[1], 10));
+        }, { rootMargin: "-40% 0px -45% 0px", threshold: 0 });
+        document.querySelectorAll(".beat").forEach((el) => observer.observe(el));
+        const progress = $("progress"), hint = $("hint");
+        addEventListener("scroll", () => {
+          const max = document.documentElement.scrollHeight - innerHeight;
+          progress.style.width = `${max > 0 ? (scrollY / max) * 100 : 0}%`;
+          hint.classList.toggle("show", scrollY > innerHeight * 0.6 && scrollY < max - innerHeight * 0.4);
+        }, { passive: true });
+        document.addEventListener("keydown", (e) => {
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+          const next = Math.max(0, Math.min(BEATS.length - 1, activeIndex + (e.key === "ArrowRight" ? 1 : -1)));
+          document.getElementById(`beat-${next}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
+
+      async function init() {
+        felt = await Felt.embed($("map"), CONFIG.mapId, {
+          uiControls: { showLegend: false, cooperativeGestures: true },
+        });
+
+        const layers = (await felt.getLayers()).filter(Boolean);
+        const by = (name) => layers.find((l) => l.name === name);
+        usId = by("Active Wildfires")?.id;
+        caId = by("Canada Active Wildfires")?.id;
+        perimId = by("Wildfire Perimeters")?.id;
+        smokeId = by("Noaa Satellite Smoke Detection")?.id;
+        aqiId = by("AirNow Air Quality Index")?.id;
+
+        // Curate: story layers only; retire everything else.
+        const storyIds = new Set([usId, caId].filter(Boolean));
+        await felt.setLayerVisibility({
+          show: [...storyIds],
+          hide: layers.filter((l) => !storyIds.has(l.id)).map((l) => l.id),
+        });
+        await felt.setViewport(CONTINENT);
+
+        // ---- Read the LIVE data the beats are written from ----
+        // Counts come from layer schemas: the count aggregate undercounts when a
+        // layer's features have sparse attributes (Canada returned 27 of 743).
+        const [usSchema, caSchema, smokeSchema, usAcres, caHa, ooc] = await Promise.all([
+          felt.getLayerSchema(usId),
+          felt.getLayerSchema(caId),
+          smokeId ? felt.getLayerSchema(smokeId).catch(() => null) : null,
+          felt.getAggregates({ layerId: usId, aggregation: { methods: ["sum", "max"], attribute: "ACRES" } }),
+          felt.getAggregates({ layerId: caId, aggregation: { methods: ["sum"], attribute: "Hectares (Ha)" } }),
+          felt.getCategoryData({ layerId: caId, attribute: "Stage of Control" }).catch(() => []),
+        ]);
+        const usCount = { count: usSchema.featureCount };
+        const caCount = { count: caSchema.featureCount };
+        const smokeCount = { count: smokeSchema?.featureCount ?? null };
+        const usTopRes = await felt.getFeatures({ layerId: usId, sorting: { attribute: "ACRES", direction: "desc" }, pageSize: 10 }).catch(() => null);
+        const usTop = usTopRes?.features?.[0]?.properties ?? {};
+        const caTopRes = await felt.getFeatures({ layerId: caId, sorting: { attribute: "Hectares (Ha)", direction: "desc" }, pageSize: 10 }).catch(() => null);
+        const caTop = caTopRes?.features?.[0]?.properties ?? {};
+        const states = await felt.getCategoryData({ layerId: usId, attribute: "STATE" }).catch(() => []);
+
+        live = {
+          us: n(usCount.count), ca: n(caCount.count),
+          total: n((usCount.count ?? 0) + (caCount.count ?? 0)),
+          usTopName: usTop.fire_name ?? null,
+          usTopState: usTop.STATE ?? "",
+          usTopAcres: n(usTop.ACRES),
+          usTopLat: usTop.latitude, usTopLon: usTop.longitude,
+          caAcres: n((caHa.sum ?? 0) * 2.471),
+          caOOC: n(ooc.find((c) => c.key === "OC")?.value ?? 0),
+          caTopLat: caTop["Latitude (WGS-84)"], caTopLon: caTop["Longitude (WGS-84)"],
+          usStatesLine: states.slice(0, 4).map((s) => `${s.key} has ${s.value}`).join(", "),
+          stats: [
+            n((usCount.count ?? 0) + (caCount.count ?? 0)),
+            n(usTop.ACRES),
+            n(usAcres.sum),
+            n(caHa.sum),
+            smokeCount.count != null ? n(smokeCount.count) : "—",
+            n((usCount.count ?? 0) + (caCount.count ?? 0)),
+          ],
+        };
+        renderSlots();
+
+        initScrollytelling();
+        void applyBeat(0);
+        window.__ready = true;
+        window.__live = live; // test hook
+      }
+
+      init().catch((err) => {
+        console.error("SDK failed:", err);
+        const dek = document.querySelector(".cover-inner .dek");
+        if (dek) dek.innerHTML = `Could not load the live map — view it directly on <a style="color:#ffd9c2" href="https://felt.com/map/${esc(CONFIG.mapId)}" target="_blank" rel="noreferrer">Felt</a>.`;
+      });
+    </script>
+  </body>
+</html>

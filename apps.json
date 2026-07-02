@@ -1,5 +1,14 @@
 [
   {
+    "slug": "north-america-fires-story",
+    "title": "Burning Now — North America's Fire Season, Live",
+    "description": "A live scroll-driven story map: every number recomputes when you open it. Flies to the largest U.S. fire right now (with its real mapped perimeter and an on-map label), contrasts Canada's bigger burn, and ends with the satellite smoke layer. Built from the Current Fires map.",
+    "map_url": "https://felt.com/map/Current-Fires-Ly1sNMMRT9BOrfNlB3Uy9B1B",
+    "author": "makella",
+    "published_at": "2026-06-15",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/north-america-fires-story/ — add a beat about air quality using the AirNow layer."
+  },
+  {
     "slug": "santa-barbara-fire-story",
     "title": "Within Reach? — A Fire Coverage Story",
     "description": "Esri-style scrollytelling: full-bleed cover, narrative cards scroll over a fixed live map, each beat flies/filters the map with a live stat (342 → 291 → 51 → 6 → 22 → 5 candidate sites). Drag pans; ⌘/Ctrl+scroll zooms; arrows jump beats.",
