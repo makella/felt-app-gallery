@@ -541,8 +541,9 @@ document.getElementById("notes").innerHTML=
 (async function init(){
  try{
   await initFelt();
-  // the map's saved viewport is unreliable — always open on the aerodrome + OLS extent
-  try{ await felt.fitViewportToBounds({ bounds:[176.118, -37.732, 176.278, -37.618] }); }catch(_){}
+  // the map's saved viewport is unreliable (loads at world zoom) — always open on the
+  // aerodrome. fitViewportToBounds fixes only the center on this embed; explicit zoom works.
+  try{ await felt.setViewport({ center:{ latitude:P.lat0, longitude:P.lon0 }, zoom:12.5 }); }catch(_){}
   window.__felt = felt;
   window.__groundProbe = groundElev;
   // wire the draw-complete handler now that felt exists
