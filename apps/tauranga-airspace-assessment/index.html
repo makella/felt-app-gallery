@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tauranga Airspace Assessment</title>
+<style>
+  :root{
+    --text:#12202b; --text-secondary:#42576a; --text-muted:#738797;
+    --card:#ffffff; --card-hover:#f4f7fa; --border:#e2e8ef; --border-strong:#c8d3dd;
+    --accent:#2563eb; --accent-dim:#eaf1fe; --accent-border:#bcd3fb;
+    --pane-bg:#f7f9fc; --bg-secondary:#eef2f7;
+    --good:#1a7a4a; --good-bg:#e7f6ee; --warn:#b45309; --warn-bg:#fdf1df; --bad:#c0392b; --bad-bg:#fbeae7;
+    --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+    --shadow-sm:0 1px 2px rgba(16,32,48,.06); --shadow-md:0 4px 16px rgba(16,32,48,.12);
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  [data-theme="dark"]{
+    --text:#e8eef4; --text-secondary:#a8b7c6; --text-muted:#768898;
+    --card:#141b23; --card-hover:#1c2530; --border:#26313d; --border-strong:#374553;
+    --pane-bg:#0e141b; --bg-secondary:#1a222c; --accent:#5b9bff; --accent-dim:#16233a; --accent-border:#2c4870;
+    --good:#4ec27f; --good-bg:#12291e; --warn:#e0a44a; --warn-bg:#2c2413; --bad:#e57a6c; --bad-bg:#2e1a17;
+    --shadow-md:0 4px 16px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:var(--sans);color:var(--text);background:var(--pane-bg)}
+  #app{display:flex;height:100vh;overflow:hidden}
+  #map{flex:1;min-width:0;position:relative}
+  #map iframe{border:0}
+  aside{width:390px;flex:none;background:var(--pane-bg);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh}
+  header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  header .title{font-weight:650;font-size:15px;letter-spacing:-.01em}
+  header .sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+  header .spacer{flex:1}
+  .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text-secondary);border-radius:var(--radius-sm);padding:5px 8px;cursor:pointer;font-size:13px}
+  .icon-btn:hover{background:var(--card-hover)}
+  .tabs{display:flex;padding:8px 10px 0;gap:4px;border-bottom:1px solid var(--border)}
+  .tab{flex:1;text-align:center;padding:8px 4px;font-size:12px;font-weight:550;color:var(--text-secondary);border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;background:transparent}
+  .tab:hover{background:var(--card-hover)}
+  .tab.active{color:var(--accent);background:var(--card);border-color:var(--border)}
+  .content{flex:1;overflow-y:auto;padding:14px 16px 40px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .lede{font-size:12.5px;color:var(--text-secondary);line-height:1.5;margin:0 0 14px}
+  .field{margin-bottom:12px}
+  label.lab{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:5px}
+  input[type=number],input[type=text]{width:100%;padding:8px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--card);color:var(--text);font-size:13px;font-family:var(--sans)}
+  input:focus{outline:2px solid var(--accent-dim);border-color:var(--accent)}
+  .seg{display:flex;gap:4px}
+  .seg button{flex:1;padding:7px 4px;font-size:12px;border:1px solid var(--border-strong);background:var(--card);color:var(--text-secondary);border-radius:var(--radius-sm);cursor:pointer}
+  .seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .btn{width:100%;padding:10px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;margin-top:2px}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn.ghost{background:var(--card);border:1px solid var(--border-strong);color:var(--text-secondary)}
+  .hint{font-size:11.5px;color:var(--text-muted);margin-top:8px;line-height:1.5}
+  .hint code{font-family:var(--mono);background:var(--bg-secondary);padding:1px 4px;border-radius:4px}
+  .result{margin-top:14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--card);overflow:hidden;box-shadow:var(--shadow-sm)}
+  .result .head{padding:12px 14px;font-weight:650;font-size:14px;display:flex;align-items:center;gap:8px}
+  .result.pen .head{background:var(--bad-bg);color:var(--bad)}
+  .result.clr .head{background:var(--good-bg);color:var(--good)}
+  .result.out .head{background:var(--bg-secondary);color:var(--text-secondary)}
+  .result .body{padding:10px 14px 14px}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px dashed var(--border)}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--text-secondary)}
+  .kv .v{font-family:var(--mono);font-weight:600}
+  .surf-list{margin-top:10px}
+  .surf-list .st{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:5px}
+  .surf{display:flex;justify-content:space-between;font-size:12px;padding:5px 8px;border-radius:6px;margin-bottom:4px;background:var(--bg-secondary)}
+  .surf .m{font-family:var(--mono)}
+  .surf.gov{outline:2px solid var(--accent-border)}
+  .surf .pen{color:var(--bad);font-weight:650}
+  .surf .ok{color:var(--good)}
+  .log-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;background:var(--card);font-size:12.5px}
+  .log-item .nm{font-weight:600;flex:1}
+  .chip{font-size:10.5px;font-weight:650;padding:2px 7px;border-radius:99px}
+  .chip.pen{background:var(--bad-bg);color:var(--bad)}
+  .chip.clr{background:var(--good-bg);color:var(--good)}
+  .chip.out{background:var(--bg-secondary);color:var(--text-secondary)}
+  .x{cursor:pointer;color:var(--text-muted);border:none;background:none;font-size:15px;padding:0 2px}
+  .empty{font-size:12px;color:var(--text-muted);text-align:center;padding:18px 0}
+  .note{font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);margin-top:16px;padding-top:12px;line-height:1.55}
+  .loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--pane-bg);z-index:5;color:var(--text-secondary);font-size:13px}
+  @media (max-width:820px){#app{flex-direction:column}aside{width:100%;height:auto;max-height:52vh;border-left:none;border-top:1px solid var(--border)}#map{height:48vh}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"><div class="loading" id="loading">Loading airspace model…</div></div>
+  <aside>
+    <header>
+      <div>
+        <div class="title">Tauranga Airspace Assessment</div>
+        <div class="sub">ICAO Annex-14 OLS · runway 07R/25L · demo</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="theme" title="Toggle theme">◐</button>
+    </header>
+    <div class="tabs">
+      <div class="tab active" data-tab="site">Site</div>
+      <div class="tab" data-tab="parcel">Parcel</div>
+      <div class="tab" data-tab="obst">Obstacles</div>
+      <div class="tab" data-tab="draw">Polygon</div>
+    </div>
+    <div class="content">
+
+      <!-- SITE -->
+      <div class="panel active" id="p-site">
+        <p class="lede">Drop a test structure anywhere and check it against the protected airspace. Choose how the height is expressed.</p>
+        <div class="field">
+          <label class="lab">Height</label>
+          <div class="row">
+            <input type="number" id="site-h" value="30" min="0" step="0.5" />
+            <div class="seg" id="site-datum">
+              <button data-d="AGL" class="on">AGL</button>
+              <button data-d="AMSL">AMSL</button>
+              <button data-d="RL">RL</button>
+            </div>
+          </div>
+          <div class="hint" id="site-datum-hint"></div>
+        </div>
+        <button class="btn ghost" id="site-arm">📍 Click map to place structure</button>
+        <div id="site-out"></div>
+      </div>
+
+      <!-- PARCEL -->
+      <div class="panel" id="p-parcel">
+        <p class="lede">Select a cadastral parcel, set a proposed height (a building or crane), and sample the airspace across the whole lot.</p>
+        <button class="btn ghost" id="parcel-arm">🖱 Click a parcel to select</button>
+        <div id="parcel-sel" class="hint">No parcel selected.</div>
+        <div class="field" style="margin-top:12px">
+          <label class="lab">Proposed height</label>
+          <div class="row">
+            <input type="number" id="parcel-h" value="20" min="0" step="0.5" />
+            <div class="seg" id="parcel-datum">
+              <button data-d="AGL" class="on">AGL</button>
+              <button data-d="AMSL">AMSL</button>
+              <button data-d="RL">RL</button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="lab">Sample density</label>
+          <div class="seg" id="parcel-dens">
+            <button data-n="4" class="on">Low</button>
+            <button data-n="7">Medium</button>
+            <button data-n="10">High</button>
+          </div>
+        </div>
+        <button class="btn" id="parcel-run" disabled>Run assessment</button>
+        <div id="parcel-out"></div>
+      </div>
+
+      <!-- OBSTACLES -->
+      <div class="panel" id="p-obst">
+        <p class="lede">Log individual obstacles to keep on the map for reference. Each is assessed as you place it.</p>
+        <div class="field">
+          <label class="lab">Label</label>
+          <input type="text" id="obst-name" placeholder="e.g. Tower crane – Site B" />
+        </div>
+        <div class="field">
+          <label class="lab">Height</label>
+          <div class="row">
+            <input type="number" id="obst-h" value="45" min="0" step="0.5" />
+            <div class="seg" id="obst-datum">
+              <button data-d="AGL" class="on">AGL</button>
+              <button data-d="AMSL">AMSL</button>
+              <button data-d="RL">RL</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn ghost" id="obst-arm">📍 Click map to log obstacle</button>
+        <div style="margin-top:14px" id="obst-list"><div class="empty">No obstacles logged yet.</div></div>
+        <button class="btn ghost" id="obst-export" style="margin-top:8px" disabled>Export obstacles (GeoJSON)</button>
+      </div>
+
+      <!-- DRAW -->
+      <div class="panel" id="p-draw">
+        <p class="lede">For a development that spans several lots, draw the footprint and test it at a finished-floor level. Point-by-point across hilly ground.</p>
+        <div class="field">
+          <label class="lab">Finished floor / design level (RL, m AMSL)</label>
+          <input type="number" id="draw-ffl" value="12" min="0" step="0.5" />
+        </div>
+        <div class="field">
+          <label class="lab">Sample density</label>
+          <div class="seg" id="draw-dens">
+            <button data-n="6" class="on">Low</button>
+            <button data-n="10">Medium</button>
+            <button data-n="14">High</button>
+          </div>
+        </div>
+        <button class="btn ghost" id="draw-start">✏️ Draw footprint polygon</button>
+        <button class="btn" id="draw-run" disabled style="margin-top:8px">Assess footprint</button>
+        <div id="draw-out"></div>
+      </div>
+
+      <div class="note" id="notes"></div>
+    </div>
+  </aside>
+</div>
+
+<script type="module">
+import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+
+const CONFIG = {
+  mapId: "dLXY9AOLuTaujX7XN3YxRjC",
+  parcelLayerId: "EAhyoyOnQ0Sf9CASr9BSqxBA",
+  olsLayerId: "lWPpXVm3R6eUDJ47qGzE1C",
+  runwayLayerId: "BF8JM5A0QnaXZhZDHGpeZC",
+};
+
+/* ---------- OLS model (Tauranga 07R/25L, ICAO Annex-14, Code 3/4 non-precision) ----------
+   Mirrors the build-time model exactly. Distances in metres in a local ENU frame. */
+const P = {
+  lat0:-37.67469978, lon0:176.198501585, mPerDegLat:110540, mPerDegLon:88109.05520929185,
+  t07:[-924.9728264938732,99.30471440008446], t25:[924.9728264938732,-99.30471440008446],
+  d:[0.994286303184604,-0.10674618166236141], n:[0.10674618166236141,0.994286303184604],
+  L:1860.576422568175, E0:4, IH_AMSL:49, IH_R:4000, CON_SLOPE:0.05, CON_R:6000, CON_TOP:149,
+  STRIP_HALF:150, STRIP_END:60, APP_SLOPE:0.02, APP_LEN:3000, APP_INNER_HALF:75, APP_DIV:0.15,
+  TRANS_SLOPE:1/7, TRANS_OUT:465
+};
+const toEnu = (lat,lon) => [ (lon-P.lon0)*P.mPerDegLon, (lat-P.lat0)*P.mPerDegLat ];
+function distSeg(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay; if(dx===0&&dy===0) return Math.hypot(px-ax,py-ay);
+  let t=((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy); t=Math.max(0,Math.min(1,t));
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+// All OLS surfaces covering a point, each with its limiting height AMSL
+function olsSurfaces(lat,lon){
+  const [x,y]=toEnu(lat,lon), out=[];
+  const dseg=distSeg(x,y,P.t07[0],P.t07[1],P.t25[0],P.t25[1]);
+  if(dseg<=P.IH_R) out.push({surface:"Inner horizontal", amsl:P.IH_AMSL});
+  else if(dseg<=P.CON_R) out.push({surface:"Conical", amsl:P.IH_AMSL+P.CON_SLOPE*(dseg-P.IH_R)});
+  for(const [end,ow,name] of [[P.t07,[-P.d[0],-P.d[1]],"Approach 07R"],[P.t25,[P.d[0],P.d[1]],"Approach 25L"]]){
+    const cx=end[0]+ow[0]*P.STRIP_END, cy=end[1]+ow[1]*P.STRIP_END;
+    const u=(x-cx)*ow[0]+(y-cy)*ow[1];
+    const v=Math.abs((x-cx)*P.n[0]+(y-cy)*P.n[1]);
+    if(u>=0 && u<=P.APP_LEN && v<=P.APP_INNER_HALF+P.APP_DIV*u) out.push({surface:name, amsl:P.E0+P.APP_SLOPE*u});
+  }
+  const s0x=P.t07[0]-P.d[0]*P.STRIP_END, s0y=P.t07[1]-P.d[1]*P.STRIP_END;
+  const along=(x-s0x)*P.d[0]+(y-s0y)*P.d[1];
+  const off=Math.abs((x-P.t07[0])*P.n[0]+(y-P.t07[1])*P.n[1]);
+  if(along>=0 && along<=P.L+2*P.STRIP_END && off>P.STRIP_HALF && off<=P.TRANS_OUT)
+    out.push({surface:"Transitional", amsl:P.E0+P.TRANS_SLOPE*(off-P.STRIP_HALF)});
+  return out;
+}
+function governing(lat,lon){ const s=olsSurfaces(lat,lon); return s.length? s.reduce((a,b)=>b.amsl<a.amsl?b:a) : null; }
+function assess(lat,lon,topAmsl){
+  const surfs=olsSurfaces(lat,lon);
+  if(!surfs.length) return {outside:true};
+  const gov=surfs.reduce((a,b)=>b.amsl<a.amsl?b:a);
+  return { outside:false, surface:gov.surface, limit:gov.amsl,
+    penetration:+(topAmsl-gov.amsl).toFixed(1), penetrates: topAmsl>gov.amsl+1e-6,
+    all:surfs.map(s=>({surface:s.surface, limit:+s.amsl.toFixed(1), margin:+(topAmsl-s.amsl).toFixed(1)})) };
+}
+const topAmsl = (datum,h,ground)=> datum==="AGL" ? ground+h : h;   // AMSL & RL are absolute; AGL adds terrain
+// Baked coarse DEM (LINZ 8 m via OpenTopoData, sampled at build time on a ~500 m grid).
+// Bilinear interpolation, no runtime network — works offline and avoids browser CORS.
+const DEM={"lat_min":-37.7,"lat_max":-37.655,"lon_min":176.16,"lon_max":176.23,"nx":15,"ny":12,"z":[17.1,6.5,5.4,5.4,5.4,5.4,17.1,6.3,0.9,5.4,5.4,5.4,5.4,5.4,5.4,17.2,5.3,5.4,5.4,5.4,14.4,5.1,0.1,0.8,1.3,1.2,5.4,5.4,5.4,1.1,22.8,9.8,5.4,5.4,5.4,7.0,2.8,5.4,5.4,5.6,5.4,5.4,5.4,3.8,3.6,5.4,8.2,2.0,5.4,5.4,1.3,5.4,5.4,5.4,2.8,7.3,5.4,4.4,8.8,8.6,5.4,1.4,1.3,5.4,5.4,5.4,5.4,5.4,5.4,3.3,20.4,14.5,14.5,10.9,7.2,5.4,1.2,1.4,5.4,5.4,5.4,5.4,1.6,5.4,6.3,20.0,17.1,13.6,9.8,6.1,5.4,5.4,1.5,5.4,5.4,5.4,1.4,1.5,1.4,11.6,18.3,14.8,11.6,8.9,5.1,5.4,1.4,1.5,5.4,1.5,1.4,1.4,1.3,1.4,7.0,13.8,12.5,9.4,6.1,3.8,5.4,5.4,1.3,5.4,5.4,1.3,1.4,1.3,1.4,4.7,8.7,7.5,6.2,3.5,5.4,5.4,5.4,1.5,5.4,5.4,1.3,1.3,1.2,1.4,1.6,5.0,4.1,2.3,5.4,5.4,5.4,5.4,0.9,0.8,5.4,1.5,1.4,1.3,1.4,1.4,1.4,1.6,5.4,5.4,5.4,5.4,5.4,5.4,5.4,5.4,1.5,1.4,1.5,1.5,1.4,1.7,5.4,5.4,5.4,5.4]};
+function groundElev(lat,lon){
+  const gx=(lon-DEM.lon_min)/(DEM.lon_max-DEM.lon_min)*(DEM.nx-1);
+  const gy=(lat-DEM.lat_min)/(DEM.lat_max-DEM.lat_min)*(DEM.ny-1);
+  if(gx<0||gy<0||gx>DEM.nx-1||gy>DEM.ny-1) return P.E0;
+  const i=Math.floor(gx), j=Math.floor(gy);
+  const i1=Math.min(i+1,DEM.nx-1), j1=Math.min(j+1,DEM.ny-1);
+  const fx=gx-i, fy=gy-j, z=DEM.z;
+  const a=z[j*DEM.nx+i], b=z[j*DEM.nx+i1], c=z[j1*DEM.nx+i], d=z[j1*DEM.nx+i1];
+  return (a*(1-fx)+b*fx)*(1-fy)+(c*(1-fx)+d*fx)*fy;
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const f1=n=> (n>=0?"":"−")+Math.abs(n).toFixed(1);
+
+/* ---------- boot ---------- */
+let felt;
+const mode = { current:"site", armed:null };
+const els = { site:[], parcelSamples:[], obst:[], draw:[], drawn:null };
+
+async function delLayers(arr){ for(const id of arr.splice(0)){ try{ await felt.deleteLayer(id); }catch(_){} } }
+async function delEls(arr){ for(const id of arr.splice(0)){ try{ await felt.deleteElement(id); }catch(_){} } }
+
+async function sampleLayer(name, pts){ // pts:[{lat,lon,pen}] -> two runtime layers, returns their ids
+  const ids=[];
+  for(const [suffix,color,pred] of [["clear","#1a7a4a",p=>!p.pen],["pen","#c0392b",p=>p.pen]]){
+    const fc={type:"FeatureCollection",features:pts.filter(pred).map(p=>({type:"Feature",properties:{},geometry:{type:"Point",coordinates:[p.lon,p.lat]}}))};
+    if(!fc.features.length) continue;
+    try{
+      const r=await felt.createLayersFromGeoJson({source:{type:"geoJsonData",data:fc},name:`${name} · ${suffix}`,geometryStyles:{Point:{color,size:7}}});
+      (r?.layers||[]).forEach(l=>l&&ids.push(l.id));
+    }catch(_){}
+  }
+  return ids;
+}
+
+function initFelt(){
+  return Felt.embed(document.getElementById("map"), CONFIG.mapId, {
+    uiControls:{ showLegend:true, cooperativeGestures:false }
+  }).then(f=>{ felt=f; });
+}
+
+/* ---------- datum hints & tab wiring ---------- */
+const DATUM_HINT = {
+  AGL:"Above ground level — the app adds terrain (LINZ 8 m DEM) at the point to get the true top elevation.",
+  AMSL:"Above mean sea level — an absolute elevation, compared straight to the surface.",
+  RL:"Reduced level — design datum from drawings. Terrain is removed; the RL is the top elevation.",
+};
+function seg(container, cb){
+  container.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    container.querySelectorAll("button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); cb(b.dataset.d||b.dataset.n, b);
+  }));
+}
+const siteDatum={v:"AGL"}, parcelDatum={v:"AGL"}, obstDatum={v:"AGL"}, parcelDens={v:4}, drawDens={v:6};
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",async ()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active"); document.getElementById("p-"+t.dataset.tab).classList.add("active");
+  mode.current=t.dataset.tab; mode.armed=null;
+  // clear transient layers when leaving a mode (keep obstacles + drawn polygon)
+  await delEls(els.site); await delLayers(els.parcelSamples); await delLayers(els.draw);
+}));
+
+/* ---------- SITE ---------- */
+function setHint(){ document.getElementById("site-datum-hint").textContent = DATUM_HINT[siteDatum.v]; }
+seg(document.getElementById("site-datum"),v=>{siteDatum.v=v;setHint();}); setHint();
+document.getElementById("site-arm").addEventListener("click",()=>{ mode.armed="site"; flashArm("site-arm"); });
+
+async function runSite(lat,lon){
+  const h=parseFloat(document.getElementById("site-h").value)||0;
+  const out=document.getElementById("site-out");
+  out.innerHTML='<div class="result out"><div class="head">Computing…</div></div>';
+  await delEls(els.site);
+  const ground = siteDatum.v==="AGL" ? await groundElev(lat,lon) : P.E0;
+  const top = topAmsl(siteDatum.v,h,ground);
+  const a = assess(lat,lon,top);
+  const marker = await felt.createElement({type:"Place",coordinates:[lon,lat],color: a.outside? "#738797" : (a.penetrates?"#c0392b":"#1a7a4a")});
+  if(marker?.id) els.site.push(marker.id);
+  renderResult(out,a,{top,ground,datum:siteDatum.v,h,lat,lon});
+}
+
+function renderResult(out,a,ctx){
+  if(a.outside){
+    out.innerHTML=`<div class="result out"><div class="head">◇ Outside protected airspace</div>
+      <div class="body"><div class="kv"><span class="k">Location</span><span class="v">${ctx.lat.toFixed(4)}, ${ctx.lon.toFixed(4)}</span></div>
+      <div class="kv"><span class="k">Structure top</span><span class="v">${f1(ctx.top)} m AMSL</span></div>
+      <div class="hint">No OLS surface covers this point — no airspace constraint from this aerodrome.</div></div></div>`;
+    return;
+  }
+  const cls=a.penetrates?"pen":"clr";
+  const head=a.penetrates ? `▲ Penetrates ${esc(a.surface)} by ${f1(a.penetration)} m`
+                          : `✓ Clear — ${f1(-a.penetration)} m below ${esc(a.surface)}`;
+  const surfRows=a.all.sort((x,y)=>x.limit-y.limit).map(s=>{
+    const gov = s.surface===a.surface;
+    const pen = s.margin>0;
+    return `<div class="surf ${gov?'gov':''}"><span>${esc(s.surface)}${gov?' · governing':''}</span>
+      <span class="m ${pen?'pen':'ok'}">${f1(s.limit)} m · ${pen?'+'+f1(s.margin):f1(s.margin)}</span></div>`;
+  }).join("");
+  out.innerHTML=`<div class="result ${cls}"><div class="head">${head}</div><div class="body">
+    <div class="kv"><span class="k">Datum</span><span class="v">${ctx.datum}${ctx.datum==="AGL"?` (ground ${f1(ctx.ground)} m)`:""}</span></div>
+    <div class="kv"><span class="k">Structure top</span><span class="v">${f1(ctx.top)} m AMSL</span></div>
+    <div class="kv"><span class="k">Governing limit</span><span class="v">${f1(a.limit)} m AMSL</span></div>
+    <div class="kv"><span class="k">Margin</span><span class="v">${a.penetrates?'+':''}${f1(a.penetration)} m</span></div>
+    <div class="surf-list"><div class="st">Surfaces at this point</div>${surfRows}</div>
+  </div></div>`;
+}
+
+/* ---------- PARCEL ---------- */
+seg(document.getElementById("parcel-datum"),v=>parcelDatum.v=v);
+seg(document.getElementById("parcel-dens"),v=>parcelDens.v=+v);
+let selectedParcel=null;
+document.getElementById("parcel-arm").addEventListener("click",()=>{ mode.armed="parcel"; flashArm("parcel-arm"); });
+document.getElementById("parcel-run").addEventListener("click",runParcel);
+
+function onParcelPicked(feat){
+  selectedParcel=feat.properties;
+  const p=selectedParcel;
+  document.getElementById("parcel-sel").innerHTML=
+    `<b>${esc(p.parcel_id)}</b> · ${esc(p.zone)}<br>ground ${f1(p.ground_elev_m)} m · council limit ${f1(p.council_height_limit_m)} m`;
+  document.getElementById("parcel-run").disabled=false;
+  try{ felt.selectFeature({id:feat.id,layerId:CONFIG.parcelLayerId,fitViewport:{maxZoom:17}}); }catch(_){}
+}
+
+async function runParcel(){
+  if(!selectedParcel) return;
+  const p=selectedParcel, N=parcelDens.v, h=parseFloat(document.getElementById("parcel-h").value)||0;
+  const out=document.getElementById("parcel-out");
+  out.innerHTML='<div class="result out"><div class="head">Sampling parcel…</div></div>';
+  await delLayers(els.parcelSamples);
+  const ground = p.ground_elev_m, top = topAmsl(parcelDatum.v,h,ground);
+  const pts=[]; const bySurface={}; let worst=null;
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+    const lon=p.bw+(p.be-p.bw)*((i+0.5)/N), lat=p.bs+(p.bn-p.bs)*((j+0.5)/N);
+    const a=assess(lat,lon,top);
+    const pen=!a.outside && a.penetrates;
+    pts.push({lat,lon,pen});
+    if(!a.outside && a.penetrates){
+      bySurface[a.surface]=(bySurface[a.surface]||0)+1;
+      if(!worst||a.penetration>worst.penetration) worst={...a,lat,lon};
+    }
+  }
+  els.parcelSamples.push(...await sampleLayer("Parcel samples",pts));
+  const total=pts.length, penCount=pts.filter(x=>x.pen).length;
+  window.__lastParcel={parcel:p,datum:parcelDatum.v,height:h,top,samples:pts,worst};
+  renderParcel(out,{p,total,penCount,bySurface,worst,h,top});
+}
+
+function renderParcel(out,d){
+  const {p,total,penCount,bySurface,worst,h,top}=d;
+  const clean=penCount===0;
+  const councilExceed = h>p.council_height_limit_m;
+  const surfRows=Object.entries(bySurface).sort((a,b)=>b[1]-a[1])
+    .map(([s,c])=>`<div class="surf"><span>${esc(s)}</span><span class="m pen">${c} / ${total} samples</span></div>`).join("");
+  out.innerHTML=`<div class="result ${clean?'clr':'pen'}"><div class="head">
+      ${clean?'✓ No airspace penetration':`▲ ${penCount} of ${total} samples penetrate`}</div>
+    <div class="body">
+      <div class="kv"><span class="k">Parcel</span><span class="v">${esc(p.parcel_id)}</span></div>
+      <div class="kv"><span class="k">Proposed</span><span class="v">${f1(h)} m ${d.datum||''} → ${f1(top)} m AMSL</span></div>
+      ${worst?`<div class="kv"><span class="k">Worst penetration</span><span class="v">+${f1(worst.penetration)} m (${esc(worst.surface)})</span></div>`:''}
+      <div class="kv"><span class="k">Council height rule</span><span class="v" style="color:${councilExceed?'var(--bad)':'var(--good)'}">${f1(p.council_height_limit_m)} m ${councilExceed?'· exceeded':'· ok'}</span></div>
+      ${surfRows?`<div class="surf-list"><div class="st">Penetration by surface</div>${surfRows}</div>`:''}
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="parcel-geojson">Export GeoJSON</button>
+        <button class="btn ghost" id="parcel-print">Print report</button>
+      </div>
+    </div></div>`;
+  document.getElementById("parcel-geojson").onclick=()=>exportParcelGeoJSON();
+  document.getElementById("parcel-print").onclick=()=>window.print();
+}
+function exportParcelGeoJSON(){
+  const d=window.__lastParcel; if(!d) return;
+  const fc={type:"FeatureCollection",properties:{parcel:d.parcel.parcel_id,proposed_top_amsl_m:d.top},
+    features:d.samples.map(s=>{const a=assess(s.lat,s.lon,d.top);return{type:"Feature",
+      properties:{penetrates:!a.outside&&a.penetrates,governing_surface:a.outside?null:a.surface,limit_amsl_m:a.outside?null:a.limit,margin_m:a.outside?null:a.penetration},
+      geometry:{type:"Point",coordinates:[s.lon,s.lat]}};})};
+  download(`${d.parcel.parcel_id.replace(/\s+/g,'_')}_assessment.geojson`, JSON.stringify(fc,null,1));
+}
+
+/* ---------- OBSTACLES ---------- */
+seg(document.getElementById("obst-datum"),v=>obstDatum.v=v);
+const obstacles=[];
+document.getElementById("obst-arm").addEventListener("click",()=>{ mode.armed="obst"; flashArm("obst-arm"); });
+document.getElementById("obst-export").addEventListener("click",()=>{
+  const fc={type:"FeatureCollection",features:obstacles.map(o=>({type:"Feature",
+    properties:{label:o.name,height:o.h,datum:o.datum,top_amsl_m:o.top,penetrates:o.a.outside?false:o.a.penetrates,governing_surface:o.a.outside?null:o.a.surface,margin_m:o.a.outside?null:o.a.penetration},
+    geometry:{type:"Point",coordinates:[o.lon,o.lat]}}))};
+  download("obstacles.geojson",JSON.stringify(fc,null,1));
+});
+async function addObstacle(lat,lon){
+  const name=document.getElementById("obst-name").value.trim()||`Obstacle ${obstacles.length+1}`;
+  const h=parseFloat(document.getElementById("obst-h").value)||0;
+  const ground = obstDatum.v==="AGL" ? await groundElev(lat,lon) : P.E0;
+  const top=topAmsl(obstDatum.v,h,ground);
+  const a=assess(lat,lon,top);
+  const marker=await felt.createElement({type:"Place",coordinates:[lon,lat],color:a.outside?"#738797":(a.penetrates?"#c0392b":"#1a7a4a")});
+  obstacles.push({name,h,datum:obstDatum.v,top,a,lat,lon,elId:marker?.id});
+  document.getElementById("obst-name").value="";
+  renderObst();
+}
+function renderObst(){
+  const list=document.getElementById("obst-list");
+  document.getElementById("obst-export").disabled=obstacles.length===0;
+  if(!obstacles.length){ list.innerHTML='<div class="empty">No obstacles logged yet.</div>'; return; }
+  list.innerHTML=obstacles.map((o,i)=>{
+    const st=o.a.outside?["out","outside"]:(o.a.penetrates?["pen",`+${f1(o.a.penetration)} m`]:["clr","clear"]);
+    return `<div class="log-item"><span class="nm">${esc(o.name)}</span>
+      <span class="v" style="font-family:var(--mono);color:var(--text-secondary);font-size:11.5px">${f1(o.top)}m</span>
+      <span class="chip ${st[0]}">${st[1]}</span>
+      <button class="x" data-i="${i}">✕</button></div>`;
+  }).join("");
+  list.querySelectorAll(".x").forEach(b=>b.onclick=async()=>{
+    const o=obstacles.splice(+b.dataset.i,1)[0]; if(o.elId){ try{await felt.deleteElement(o.elId);}catch(_){} } renderObst();
+  });
+}
+
+/* ---------- DRAW (custom polygon) ---------- */
+seg(document.getElementById("draw-dens"),v=>drawDens.v=+v);
+let drawRing=null;
+document.getElementById("draw-start").addEventListener("click",async()=>{
+  try{ await delLayers(els.draw); if(els.drawn){await felt.deleteElement(els.drawn);els.drawn=null;} }catch(_){}
+  drawRing=null; document.getElementById("draw-run").disabled=true;
+  document.getElementById("draw-out").innerHTML='<div class="hint">Click points on the map to trace the footprint; double-click to finish.</div>';
+  try{ felt.setTool("polygon"); }catch(_){}
+});
+felt_onCreateEnd(); // registered after felt ready (see init)
+
+function pointInRing(x,y,ring){
+  let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>y)!==(yj>y)) && x < (xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside;
+  }
+  return inside;
+}
+document.getElementById("draw-run").addEventListener("click",async()=>{
+  if(!drawRing) return;
+  const ffl=parseFloat(document.getElementById("draw-ffl").value)||0, N=drawDens.v;
+  const out=document.getElementById("draw-out");
+  out.innerHTML='<div class="result out"><div class="head">Sampling footprint…</div></div>';
+  await delLayers(els.draw);
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  for(const [x,y] of drawRing){ minx=Math.min(minx,x);maxx=Math.max(maxx,x);miny=Math.min(miny,y);maxy=Math.max(maxy,y); }
+  const pts=[]; const bySurface={}; let worst=null;
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+    const lon=minx+(maxx-minx)*((i+0.5)/N), lat=miny+(maxy-miny)*((j+0.5)/N);
+    if(!pointInRing(lon,lat,drawRing)) continue;
+    const a=assess(lat,lon,ffl); const pen=!a.outside&&a.penetrates;
+    pts.push({lat,lon,pen});
+    if(pen){ bySurface[a.surface]=(bySurface[a.surface]||0)+1; if(!worst||a.penetration>worst.penetration) worst={...a}; }
+  }
+  els.draw.push(...await sampleLayer("Footprint samples",pts));
+  const penCount=pts.filter(x=>x.pen).length;
+  const surfRows=Object.entries(bySurface).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`<div class="surf"><span>${esc(s)}</span><span class="m pen">${c} samples</span></div>`).join("");
+  out.innerHTML=`<div class="result ${penCount?'pen':'clr'}"><div class="head">
+      ${penCount?`▲ ${penCount} of ${pts.length} points penetrate`:'✓ Footprint clear'}</div>
+    <div class="body">
+      <div class="kv"><span class="k">Finished floor level</span><span class="v">${f1(ffl)} m AMSL</span></div>
+      <div class="kv"><span class="k">Points inside footprint</span><span class="v">${pts.length}</span></div>
+      ${worst?`<div class="kv"><span class="k">Worst penetration</span><span class="v">+${f1(worst.penetration)} m (${esc(worst.surface)})</span></div>`:''}
+      ${surfRows?`<div class="surf-list"><div class="st">Penetration by surface</div>${surfRows}</div>`:''}
+      <div class="hint">Each point is tested against the governing surface at its own location — the reason a footprint on sloping ground can clear in one corner and bust in another.</div>
+    </div></div>`;
+});
+
+function felt_onCreateEnd(){ /* placeholder; real handler wired in init once felt exists */ }
+
+/* ---------- shared: arm feedback, download, click routing ---------- */
+function flashArm(id){ const b=document.getElementById(id); const t=b.textContent; b.textContent="Click the map…"; b.style.borderColor="var(--accent)"; setTimeout(()=>{b.textContent=t;b.style.borderColor="";},2500); }
+function download(name,text){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"application/geo+json"})); a.download=name; a.click(); }
+
+document.getElementById("theme").addEventListener("click",()=>{
+  const el=document.documentElement; el.dataset.theme = el.dataset.theme==="dark"?"":"dark";
+});
+document.getElementById("notes").innerHTML=
+  `Demo — Tauranga (NZTG). OLS computed from the real 07R/25L runway to ICAO Annex-14 (Code 3/4, non-precision assumed). `+
+  `Parcels are demo cadastre from OSM building footprints with LINZ 8 m DEM ground levels. `+
+  `AGL heights use a baked terrain grid (LINZ 8 m DEM sampled across the area); “Export GeoJSON” downloads real results; “Print report” uses the browser (a static app can’t run a server-side PDF). Logged obstacles are session-only.`;
+
+/* ---------- init ---------- */
+(async function init(){
+ try{
+  await initFelt();
+  window.__felt = felt;
+  window.__groundProbe = groundElev;
+  // wire the draw-complete handler now that felt exists
+  felt.onElementCreateEnd({ handler: async (p)=>{
+    if(mode.current!=="draw") return;
+    const elId=p?.element?.id ?? p?.id;
+    try{
+      const geom=await felt.getElementGeometry(elId);
+      if(geom?.type==="Polygon"){ drawRing=geom.coordinates[0]; els.drawn=elId; document.getElementById("draw-run").disabled=false;
+        document.getElementById("draw-out").innerHTML='<div class="hint">Footprint captured. Set a floor level and assess.</div>'; }
+      felt.setTool(null);
+    }catch(_){ felt.setTool(null); }
+  }});
+  // global click routing
+  felt.onPointerClick({ handler: async (e)=>{
+    const lat=e.coordinate?.latitude, lon=e.coordinate?.longitude;
+    if(lat==null||lon==null) return;
+    if(mode.current==="site" && mode.armed==="site"){ mode.armed=null; runSite(lat,lon); }
+    else if(mode.current==="parcel" && mode.armed==="parcel"){
+      const feat=(e.features||[]).find(f=>f.layerId===CONFIG.parcelLayerId);
+      if(feat){ mode.armed=null; onParcelPicked(feat); }
+    }
+    else if(mode.current==="obst" && mode.armed==="obst"){ mode.armed=null; addObstacle(lat,lon); }
+  }});
+  document.getElementById("loading").remove();
+  window.__ready=true;
+ }catch(err){
+  window.__initError = String(err && err.message || err);
+  const l=document.getElementById("loading");
+  if(l){ l.textContent="Map failed to load: "+window.__initError; l.style.color="var(--bad)"; }
+  console.error("init failed:", err);
+ }
+})();
+</script>
+</body>
+</html>

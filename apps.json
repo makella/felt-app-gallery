@@ -1,5 +1,14 @@
 [
   {
+    "slug": "tauranga-airspace-assessment",
+    "title": "Tauranga Airspace Assessment",
+    "description": "ICAO Annex-14 OLS demo for Tauranga (NZTG) runway 07R/25L: drop a test structure, assess a whole cadastral parcel, log obstacles, or draw a multi-lot footprint — each checked against inner horizontal, conical, approach, and transitional surfaces with AGL/AMSL/RL datums and a baked LINZ 8 m terrain grid. Exports results as GeoJSON.",
+    "map_url": "https://felt.com/map/dLXY9AOLuTaujX7XN3YxRjC",
+    "author": "makella",
+    "published_at": "2026-07-17",
+    "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/tauranga-airspace-assessment/ — add a batch mode that assesses an uploaded GeoJSON of proposed structures in one pass."
+  },
+  {
     "slug": "north-america-fires-story",
     "title": "Burning Now — North America's Fire Season, Live",
     "description": "A live scroll-driven story map: every number recomputes when you open it. Flies to the largest U.S. fire right now (with its real mapped perimeter and an on-map label), contrasts Canada's bigger burn, and ends with the satellite smoke layer. Built from the Current Fires map.",
