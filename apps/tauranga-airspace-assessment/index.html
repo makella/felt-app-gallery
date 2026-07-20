@@ -207,22 +207,56 @@
 import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
+/* =============================================================================
+   ADAPTING THIS APP TO YOUR AIRPORT
+   -----------------------------------------------------------------------------
+   This is a self-contained page: one HTML file, the Felt JS SDK loaded from a
+   CDN, no build step and no server. To point it at your own aerodrome and data,
+   change the five things below. Each is marked with an "ADAPT (n)" comment:
+
+     1. CONFIG        your Felt map ID and the layer IDs inside it.
+     2. P (OLS model) your runway's surveyed position and orientation, plus the
+                      Annex-14 surface constants for its classification.
+     3. DEM           your terrain model (ships with a coarse placeholder).
+     4. PARCELS       your cadastre + zoning for the footprint tool's council
+                      check (also placeholder here).
+     5. Parcel layer  the attribute names the Parcel tool reads (onParcelPicked).
+
+   Nothing else needs to change. The assessment logic, the UI, the PDF report
+   and the GeoJSON export all work unchanged once the data above is yours.
+   ============================================================================= */
+
+// ADAPT (1): Your Felt map and its layers.
+// Build a map on felt.com with your cadastre, runway and airspace layers, then
+// read the IDs from it. The map ID is the code at the end of the map URL
+// (felt.com/map/<THIS-PART>); layer IDs come from the Felt API / MCP get_map_layers.
 const CONFIG = {
-  mapId: "dLXY9AOLuTaujX7XN3YxRjC",
-  parcelLayerId: "EAhyoyOnQ0Sf9CASr9BSqxBA",
-  olsLayerId: "lWPpXVm3R6eUDJ47qGzE1C",
-  runwayLayerId: "BF8JM5A0QnaXZhZDHGpeZC",
+  mapId: "dLXY9AOLuTaujX7XN3YxRjC",          // your Felt map ID
+  parcelLayerId: "EAhyoyOnQ0Sf9CASr9BSqxBA", // cadastre layer (the Parcel tool reads this)
+  olsLayerId: "lWPpXVm3R6eUDJ47qGzE1C",      // airspace surfaces layer (drawn on the map)
+  runwayLayerId: "BF8JM5A0QnaXZhZDHGpeZC",   // runway layer (drawn on the map)
 };
 
 /* ---------- OLS model (Tauranga 07R/25L, ICAO Annex-14, Code 3/4 non-precision) ----------
-   Mirrors the build-time model exactly. Distances in metres in a local ENU frame. */
+   This is the airspace engine's input. The surfaces (inner horizontal, conical, approach,
+   transitional) are computed live from these numbers. Distances are in metres in a local
+   east-north-up (ENU) frame centred on the runway.
+
+   ADAPT (2): Replace with YOUR runway. The first group is survey geometry (where the runway
+   is and which way it points). The rest are the Annex-14 surface dimensions and slopes for
+   your runway's classification. Swap the demo values for your surveyed data and the standard's
+   constants for your runway code, and every assessment becomes exact for your aerodrome. */
 const P = {
-  lat0:-37.67469978, lon0:176.198501585, mPerDegLat:110540, mPerDegLon:88109.05520929185,
-  t07:[-924.9728264938732,99.30471440008446], t25:[924.9728264938732,-99.30471440008446],
-  d:[0.994286303184604,-0.10674618166236141], n:[0.10674618166236141,0.994286303184604],
-  L:1860.576422568175, E0:4, IH_AMSL:49, IH_R:4000, CON_SLOPE:0.05, CON_R:6000, CON_TOP:149,
-  STRIP_HALF:150, STRIP_END:60, APP_SLOPE:0.02, APP_LEN:3000, APP_INNER_HALF:75, APP_DIV:0.15,
-  TRANS_SLOPE:1/7, TRANS_OUT:465
+  lat0:-37.67469978, lon0:176.198501585,            // runway reference point (survey): centre lat/lon
+  mPerDegLat:110540, mPerDegLon:88109.05520929185,  // metres per degree at this latitude (builds the ENU frame)
+  t07:[-924.9728264938732,99.30471440008446], t25:[924.9728264938732,-99.30471440008446], // the two runway thresholds (ENU metres)
+  d:[0.994286303184604,-0.10674618166236141], n:[0.10674618166236141,0.994286303184604],  // runway direction (d) and perpendicular (n) unit vectors
+  L:1860.576422568175, E0:4,                        // runway length (m) and threshold elevation (m AMSL)
+  IH_AMSL:49, IH_R:4000,                            // inner horizontal: height (m AMSL) and radius (m)
+  CON_SLOPE:0.05, CON_R:6000, CON_TOP:149,          // conical: slope, outer radius (m), top height (m AMSL)
+  STRIP_HALF:150, STRIP_END:60,                     // runway strip half-width and end extension (m)
+  APP_SLOPE:0.02, APP_LEN:3000, APP_INNER_HALF:75, APP_DIV:0.15, // approach: slope, length, inner half-width, divergence
+  TRANS_SLOPE:1/7, TRANS_OUT:465                    // transitional: slope and outer limit (m)
 };
 const toEnu = (lat,lon) => [ (lon-P.lon0)*P.mPerDegLon, (lat-P.lat0)*P.mPerDegLat ];
 function distSeg(px,py,ax,ay,bx,by){
@@ -259,8 +293,11 @@ function assess(lat,lon,topAmsl){
     all:surfs.map(s=>({surface:s.surface, limit:+s.amsl.toFixed(1), margin:+(topAmsl-s.amsl).toFixed(1)})) };
 }
 const topAmsl = (datum,h,ground)=> datum==="AGL" ? ground+h : h;   // AMSL & RL are absolute; AGL adds terrain
-// Baked coarse DEM (LINZ 8 m via OpenTopoData, sampled at build time on a ~500 m grid).
-// Bilinear interpolation, no runtime network — works offline and avoids browser CORS.
+// ADAPT (3): PLACEHOLDER TERRAIN. A coarse elevation grid (LINZ 8 m sampled on a ~500 m grid
+// at build time), used only for AGL heights so the ground gets added under an above-ground
+// value. Bilinear interpolation, no network calls, so it works offline. Replace the grid below
+// with a sample of your own terrain model over your area for accurate AGL results.
+// (AMSL and RL heights are absolute and do not use this.)
 const DEM={"lat_min":-37.7,"lat_max":-37.655,"lon_min":176.16,"lon_max":176.23,"nx":15,"ny":12,"z":[17.1,6.5,5.4,5.4,5.4,5.4,17.1,6.3,0.9,5.4,5.4,5.4,5.4,5.4,5.4,17.2,5.3,5.4,5.4,5.4,14.4,5.1,0.1,0.8,1.3,1.2,5.4,5.4,5.4,1.1,22.8,9.8,5.4,5.4,5.4,7.0,2.8,5.4,5.4,5.6,5.4,5.4,5.4,3.8,3.6,5.4,8.2,2.0,5.4,5.4,1.3,5.4,5.4,5.4,2.8,7.3,5.4,4.4,8.8,8.6,5.4,1.4,1.3,5.4,5.4,5.4,5.4,5.4,5.4,3.3,20.4,14.5,14.5,10.9,7.2,5.4,1.2,1.4,5.4,5.4,5.4,5.4,1.6,5.4,6.3,20.0,17.1,13.6,9.8,6.1,5.4,5.4,1.5,5.4,5.4,5.4,1.4,1.5,1.4,11.6,18.3,14.8,11.6,8.9,5.1,5.4,1.4,1.5,5.4,1.5,1.4,1.4,1.3,1.4,7.0,13.8,12.5,9.4,6.1,3.8,5.4,5.4,1.3,5.4,5.4,1.3,1.4,1.3,1.4,4.7,8.7,7.5,6.2,3.5,5.4,5.4,5.4,1.5,5.4,5.4,1.3,1.3,1.2,1.4,1.6,5.0,4.1,2.3,5.4,5.4,5.4,5.4,0.9,0.8,5.4,1.5,1.4,1.3,1.4,1.4,1.4,1.6,5.4,5.4,5.4,5.4,5.4,5.4,5.4,5.4,1.5,1.4,1.5,1.5,1.4,1.7,5.4,5.4,5.4,5.4]};
 function groundElev(lat,lon){
   const gx=(lon-DEM.lon_min)/(DEM.lon_max-DEM.lon_min)*(DEM.nx-1);
@@ -275,8 +312,11 @@ function groundElev(lat,lon){
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f1=n=> (n>=0?"":"−")+Math.abs(n).toFixed(1);
 
-// Baked cadastre lookup (zone + council height rule + extent) so a drawn footprint can pick up
-// the planning zones it crosses, the way the source tool does.
+// ADAPT (4): PLACEHOLDER CADASTRE for the Polygon (footprint) tool's council-rule pickup.
+// A drawn footprint reports the zones it crosses and their height limits from this baked list.
+// Note: the Parcel tab does NOT use this. It reads zone + limit straight off your Felt cadastre
+// layer (CONFIG.parcelLayerId). Replace this list with your real cadastre + zoning, or point the
+// footprint tool at the same Felt layer, so both tools share one source of truth.
 const ZONE={R:"Residential",C:"Commercial",I:"Industrial"};
 const PARCELS=[[1,"R",9.0,176.18505,-37.67048,176.18515,-37.67038],[2,"R",9.0,176.21167,-37.67988,176.21181,-37.67968],[3,"R",9.0,176.2108,-37.67981,176.2111,-37.67965],[4,"R",9.0,176.19768,-37.67079,176.19776,-37.67039],[5,"R",9.0,176.20931,-37.68363,176.20947,-37.68351],[6,"R",9.0,176.1842,-37.66943,176.1843,-37.66936],[7,"R",9.0,176.21149,-37.66814,176.21165,-37.66799],[8,"I",16.0,176.19567,-37.67035,176.19592,-37.67006],[9,"C",14.0,176.20971,-37.66808,176.21025,-37.66763],[10,"I",16.0,176.19738,-37.66825,176.19768,-37.66796],[11,"R",9.0,176.1867,-37.66848,176.1868,-37.6684],[12,"R",9.0,176.19905,-37.67054,176.19912,-37.67044],[13,"R",9.0,176.20615,-37.68739,176.20629,-37.68723],[14,"I",16.0,176.20109,-37.66926,176.20121,-37.66906],[15,"I",16.0,176.20878,-37.67145,176.20972,-37.67082],[16,"R",9.0,176.19556,-37.66877,176.19574,-37.66861],[17,"C",14.0,176.18811,-37.67001,176.18865,-37.66953],[18,"R",9.0,176.20933,-37.68138,176.20944,-37.68128],[19,"R",9.0,176.21107,-37.68028,176.21124,-37.68008],[20,"R",9.0,176.20469,-37.68958,176.20486,-37.68943],[21,"R",9.0,176.21166,-37.67885,176.21186,-37.67865],[22,"R",9.0,176.18309,-37.66809,176.18351,-37.66793],[23,"R",9.0,176.20812,-37.68294,176.2083,-37.68279],[24,"C",14.0,176.20868,-37.66835,176.20917,-37.668],[25,"R",9.0,176.21182,-37.66835,176.21195,-37.66819],[26,"R",9.0,176.21155,-37.67884,176.21166,-37.67875],[27,"R",9.0,176.20784,-37.66871,176.20809,-37.66846],[28,"R",9.0,176.21176,-37.67841,176.21193,-37.67826],[29,"C",14.0,176.20172,-37.66896,176.2021,-37.66867],[30,"R",9.0,176.20914,-37.68282,176.2094,-37.68262],[31,"R",9.0,176.20742,-37.68522,176.20781,-37.68507],[32,"R",9.0,176.19809,-37.67098,176.19873,-37.67092],[33,"R",9.0,176.20659,-37.66984,176.20702,-37.66964],[34,"I",16.0,176.20476,-37.67172,176.20502,-37.67147],[35,"R",9.0,176.20588,-37.68827,176.20609,-37.68805],[36,"R",9.0,176.18466,-37.67063,176.18508,-37.67049],[37,"C",14.0,176.18387,-37.66822,176.18407,-37.66771],[38,"R",9.0,176.21043,-37.66874,176.21079,-37.66846],[39,"R",9.0,176.2119,-37.66818,176.212,-37.6681],[40,"R",9.0,176.19971,-37.67104,176.19995,-37.67081],[41,"R",9.0,176.21066,-37.6685,176.21092,-37.66831],[42,"I",16.0,176.20183,-37.67003,176.20236,-37.66957],[43,"R",9.0,176.18348,-37.67022,176.1837,-37.67006],[44,"R",9.0,176.20626,-37.68356,176.20651,-37.68339],[45,"R",9.0,176.19558,-37.66862,176.19575,-37.66847],[46,"C",14.0,176.20999,-37.67113,176.2106,-37.67052],[47,"R",9.0,176.20747,-37.69002,176.20769,-37.6899],[48,"R",9.0,176.20616,-37.68367,176.20635,-37.68353],[49,"R",9.0,176.19766,-37.67093,176.19775,-37.67078],[50,"R",9.0,176.203,-37.66938,176.20338,-37.66902],[51,"R",9.0,176.21158,-37.66807,176.2117,-37.66797],[52,"I",16.0,176.20487,-37.67053,176.20569,-37.67019],[53,"I",16.0,176.20559,-37.66804,176.20659,-37.66772],[54,"I",16.0,176.20624,-37.67051,176.20693,-37.67015],[55,"I",16.0,176.20926,-37.66995,176.20997,-37.66946],[56,"R",9.0,176.21043,-37.67674,176.21073,-37.67652],[57,"R",9.0,176.20866,-37.66912,176.20904,-37.66884],[58,"R",9.0,176.19884,-37.66905,176.19907,-37.66886],[59,"I",16.0,176.1982,-37.66895,176.1985,-37.66866],[60,"R",9.0,176.20319,-37.66842,176.20354,-37.6682],[61,"R",9.0,176.20797,-37.68496,176.20821,-37.68482],[62,"R",9.0,176.20747,-37.66835,176.20779,-37.66806],[63,"R",9.0,176.20739,-37.66898,176.20751,-37.66885],[64,"R",9.0,176.19686,-37.66874,176.19711,-37.66861],[65,"C",14.0,176.20312,-37.66967,176.20377,-37.66923],[66,"R",9.0,176.1971,-37.66874,176.19719,-37.66861],[67,"I",16.0,176.20136,-37.66818,176.20172,-37.66804],[68,"R",9.0,176.20816,-37.67014,176.20854,-37.6698],[69,"C",14.0,176.21006,-37.66852,176.21058,-37.6681],[70,"R",9.0,176.20489,-37.68905,176.2051,-37.68887],[71,"R",9.0,176.20486,-37.681,176.20501,-37.68087],[72,"R",9.0,176.20876,-37.68377,176.20891,-37.68372],[73,"I",16.0,176.20099,-37.66877,176.20116,-37.6687],[74,"C",14.0,176.20781,-37.66906,176.20828,-37.66869],[75,"R",9.0,176.20822,-37.66813,176.20858,-37.66783],[76,"R",9.0,176.20391,-37.66836,176.20403,-37.66821],[77,"C",14.0,176.19915,-37.66825,176.19985,-37.66804],[78,"R",9.0,176.1968,-37.67006,176.19708,-37.6699],[79,"R",9.0,176.20971,-37.68356,176.20983,-37.68346],[80,"C",14.0,176.1882,-37.67031,176.18901,-37.66975],[81,"C",14.0,176.20792,-37.66981,176.20824,-37.66936],[82,"R",9.0,176.2105,-37.68033,176.21068,-37.68013],[83,"I",16.0,176.20431,-37.67168,176.20457,-37.67143],[84,"R",9.0,176.21108,-37.68005,176.21131,-37.67987],[85,"R",9.0,176.20468,-37.68937,176.20481,-37.68921],[86,"R",9.0,176.21041,-37.6823,176.21066,-37.68219],[87,"R",9.0,176.19554,-37.66891,176.19572,-37.66876],[88,"C",14.0,176.20493,-37.67009,176.20567,-37.66982],[89,"R",9.0,176.17967,-37.66861,176.17984,-37.66854],[90,"I",16.0,176.19731,-37.66919,176.19755,-37.66903],[91,"R",9.0,176.20738,-37.68975,176.20756,-37.68965],[92,"R",9.0,176.20727,-37.68541,176.20744,-37.68531],[93,"R",9.0,176.20282,-37.66964,176.20302,-37.66946],[94,"R",9.0,176.20575,-37.68874,176.20591,-37.68851],[95,"I",16.0,176.19582,-37.6698,176.196,-37.66964],[96,"R",9.0,176.20039,-37.67108,176.20064,-37.67084],[97,"R",9.0,176.20192,-37.67116,176.20217,-37.67092],[98,"I",16.0,176.20363,-37.67161,176.20389,-37.67137],[99,"R",9.0,176.20657,-37.66964,176.20679,-37.66919],[100,"R",9.0,176.21009,-37.68223,176.21024,-37.68219],[101,"C",14.0,176.19678,-37.6697,176.19712,-37.66931],[102,"R",9.0,176.18368,-37.67015,176.18384,-37.67002],[103,"R",9.0,176.2039,-37.66946,176.20415,-37.66927],[104,"R",9.0,176.19553,-37.66906,176.1957,-37.6689],[105,"R",9.0,176.19724,-37.66992,176.19756,-37.66968],[106,"I",16.0,176.19553,-37.67033,176.1957,-37.67005],[107,"R",9.0,176.20376,-37.66847,176.20402,-37.66835],[108,"R",9.0,176.21176,-37.68023,176.21193,-37.68009],[109,"R",9.0,176.21193,-37.68,176.21213,-37.67976],[110,"R",9.0,176.21065,-37.68015,176.2109,-37.68002]]
   .map(a=>({id:"Lot "+a[0],zone:ZONE[a[1]],limit:a[2],bw:a[3],bs:a[4],be:a[5],bn:a[6]}));
@@ -493,6 +533,11 @@ let selectedParcel=null;
 document.getElementById("parcel-arm").addEventListener("click",()=>{ mode.armed="parcel"; flashArm("parcel-arm"); });
 document.getElementById("parcel-run").addEventListener("click",runParcel);
 
+// ADAPT (5): The Parcel tool reads these attributes off each cadastre feature. Your parcel
+// layer must expose these fields (or rename them here to match your layer's columns):
+//   parcel_id (text), zone (text), ground_elev_m (number), council_height_limit_m (number),
+//   and the lot bounding box bw / bs / be / bn (west / south / east / north), used to sample
+//   airspace across the whole lot. If a field is missing, that row of the result reads blank.
 function onParcelPicked(feat){
   selectedParcel=feat.properties;
   const p=selectedParcel;
