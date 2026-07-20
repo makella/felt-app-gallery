@@ -197,6 +197,7 @@
         <div id="draw-out"></div>
       </div>
 
+      <div id="ptout"></div>
       <div class="note" id="notes"></div>
     </div>
   </aside>
@@ -204,6 +205,7 @@
 
 <script type="module">
 import { Felt } from "https://esm.sh/@feltmaps/js-sdk@1.10.0";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const CONFIG = {
   mapId: "dLXY9AOLuTaujX7XN3YxRjC",
@@ -273,7 +275,122 @@ function groundElev(lat,lon){
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f1=n=> (n>=0?"":"−")+Math.abs(n).toFixed(1);
 
+// Baked cadastre lookup (zone + council height rule + extent) so a drawn footprint can pick up
+// the planning zones it crosses, the way the source tool does.
+const ZONE={R:"Residential",C:"Commercial",I:"Industrial"};
+const PARCELS=[[1,"R",9.0,176.18505,-37.67048,176.18515,-37.67038],[2,"R",9.0,176.21167,-37.67988,176.21181,-37.67968],[3,"R",9.0,176.2108,-37.67981,176.2111,-37.67965],[4,"R",9.0,176.19768,-37.67079,176.19776,-37.67039],[5,"R",9.0,176.20931,-37.68363,176.20947,-37.68351],[6,"R",9.0,176.1842,-37.66943,176.1843,-37.66936],[7,"R",9.0,176.21149,-37.66814,176.21165,-37.66799],[8,"I",16.0,176.19567,-37.67035,176.19592,-37.67006],[9,"C",14.0,176.20971,-37.66808,176.21025,-37.66763],[10,"I",16.0,176.19738,-37.66825,176.19768,-37.66796],[11,"R",9.0,176.1867,-37.66848,176.1868,-37.6684],[12,"R",9.0,176.19905,-37.67054,176.19912,-37.67044],[13,"R",9.0,176.20615,-37.68739,176.20629,-37.68723],[14,"I",16.0,176.20109,-37.66926,176.20121,-37.66906],[15,"I",16.0,176.20878,-37.67145,176.20972,-37.67082],[16,"R",9.0,176.19556,-37.66877,176.19574,-37.66861],[17,"C",14.0,176.18811,-37.67001,176.18865,-37.66953],[18,"R",9.0,176.20933,-37.68138,176.20944,-37.68128],[19,"R",9.0,176.21107,-37.68028,176.21124,-37.68008],[20,"R",9.0,176.20469,-37.68958,176.20486,-37.68943],[21,"R",9.0,176.21166,-37.67885,176.21186,-37.67865],[22,"R",9.0,176.18309,-37.66809,176.18351,-37.66793],[23,"R",9.0,176.20812,-37.68294,176.2083,-37.68279],[24,"C",14.0,176.20868,-37.66835,176.20917,-37.668],[25,"R",9.0,176.21182,-37.66835,176.21195,-37.66819],[26,"R",9.0,176.21155,-37.67884,176.21166,-37.67875],[27,"R",9.0,176.20784,-37.66871,176.20809,-37.66846],[28,"R",9.0,176.21176,-37.67841,176.21193,-37.67826],[29,"C",14.0,176.20172,-37.66896,176.2021,-37.66867],[30,"R",9.0,176.20914,-37.68282,176.2094,-37.68262],[31,"R",9.0,176.20742,-37.68522,176.20781,-37.68507],[32,"R",9.0,176.19809,-37.67098,176.19873,-37.67092],[33,"R",9.0,176.20659,-37.66984,176.20702,-37.66964],[34,"I",16.0,176.20476,-37.67172,176.20502,-37.67147],[35,"R",9.0,176.20588,-37.68827,176.20609,-37.68805],[36,"R",9.0,176.18466,-37.67063,176.18508,-37.67049],[37,"C",14.0,176.18387,-37.66822,176.18407,-37.66771],[38,"R",9.0,176.21043,-37.66874,176.21079,-37.66846],[39,"R",9.0,176.2119,-37.66818,176.212,-37.6681],[40,"R",9.0,176.19971,-37.67104,176.19995,-37.67081],[41,"R",9.0,176.21066,-37.6685,176.21092,-37.66831],[42,"I",16.0,176.20183,-37.67003,176.20236,-37.66957],[43,"R",9.0,176.18348,-37.67022,176.1837,-37.67006],[44,"R",9.0,176.20626,-37.68356,176.20651,-37.68339],[45,"R",9.0,176.19558,-37.66862,176.19575,-37.66847],[46,"C",14.0,176.20999,-37.67113,176.2106,-37.67052],[47,"R",9.0,176.20747,-37.69002,176.20769,-37.6899],[48,"R",9.0,176.20616,-37.68367,176.20635,-37.68353],[49,"R",9.0,176.19766,-37.67093,176.19775,-37.67078],[50,"R",9.0,176.203,-37.66938,176.20338,-37.66902],[51,"R",9.0,176.21158,-37.66807,176.2117,-37.66797],[52,"I",16.0,176.20487,-37.67053,176.20569,-37.67019],[53,"I",16.0,176.20559,-37.66804,176.20659,-37.66772],[54,"I",16.0,176.20624,-37.67051,176.20693,-37.67015],[55,"I",16.0,176.20926,-37.66995,176.20997,-37.66946],[56,"R",9.0,176.21043,-37.67674,176.21073,-37.67652],[57,"R",9.0,176.20866,-37.66912,176.20904,-37.66884],[58,"R",9.0,176.19884,-37.66905,176.19907,-37.66886],[59,"I",16.0,176.1982,-37.66895,176.1985,-37.66866],[60,"R",9.0,176.20319,-37.66842,176.20354,-37.6682],[61,"R",9.0,176.20797,-37.68496,176.20821,-37.68482],[62,"R",9.0,176.20747,-37.66835,176.20779,-37.66806],[63,"R",9.0,176.20739,-37.66898,176.20751,-37.66885],[64,"R",9.0,176.19686,-37.66874,176.19711,-37.66861],[65,"C",14.0,176.20312,-37.66967,176.20377,-37.66923],[66,"R",9.0,176.1971,-37.66874,176.19719,-37.66861],[67,"I",16.0,176.20136,-37.66818,176.20172,-37.66804],[68,"R",9.0,176.20816,-37.67014,176.20854,-37.6698],[69,"C",14.0,176.21006,-37.66852,176.21058,-37.6681],[70,"R",9.0,176.20489,-37.68905,176.2051,-37.68887],[71,"R",9.0,176.20486,-37.681,176.20501,-37.68087],[72,"R",9.0,176.20876,-37.68377,176.20891,-37.68372],[73,"I",16.0,176.20099,-37.66877,176.20116,-37.6687],[74,"C",14.0,176.20781,-37.66906,176.20828,-37.66869],[75,"R",9.0,176.20822,-37.66813,176.20858,-37.66783],[76,"R",9.0,176.20391,-37.66836,176.20403,-37.66821],[77,"C",14.0,176.19915,-37.66825,176.19985,-37.66804],[78,"R",9.0,176.1968,-37.67006,176.19708,-37.6699],[79,"R",9.0,176.20971,-37.68356,176.20983,-37.68346],[80,"C",14.0,176.1882,-37.67031,176.18901,-37.66975],[81,"C",14.0,176.20792,-37.66981,176.20824,-37.66936],[82,"R",9.0,176.2105,-37.68033,176.21068,-37.68013],[83,"I",16.0,176.20431,-37.67168,176.20457,-37.67143],[84,"R",9.0,176.21108,-37.68005,176.21131,-37.67987],[85,"R",9.0,176.20468,-37.68937,176.20481,-37.68921],[86,"R",9.0,176.21041,-37.6823,176.21066,-37.68219],[87,"R",9.0,176.19554,-37.66891,176.19572,-37.66876],[88,"C",14.0,176.20493,-37.67009,176.20567,-37.66982],[89,"R",9.0,176.17967,-37.66861,176.17984,-37.66854],[90,"I",16.0,176.19731,-37.66919,176.19755,-37.66903],[91,"R",9.0,176.20738,-37.68975,176.20756,-37.68965],[92,"R",9.0,176.20727,-37.68541,176.20744,-37.68531],[93,"R",9.0,176.20282,-37.66964,176.20302,-37.66946],[94,"R",9.0,176.20575,-37.68874,176.20591,-37.68851],[95,"I",16.0,176.19582,-37.6698,176.196,-37.66964],[96,"R",9.0,176.20039,-37.67108,176.20064,-37.67084],[97,"R",9.0,176.20192,-37.67116,176.20217,-37.67092],[98,"I",16.0,176.20363,-37.67161,176.20389,-37.67137],[99,"R",9.0,176.20657,-37.66964,176.20679,-37.66919],[100,"R",9.0,176.21009,-37.68223,176.21024,-37.68219],[101,"C",14.0,176.19678,-37.6697,176.19712,-37.66931],[102,"R",9.0,176.18368,-37.67015,176.18384,-37.67002],[103,"R",9.0,176.2039,-37.66946,176.20415,-37.66927],[104,"R",9.0,176.19553,-37.66906,176.1957,-37.6689],[105,"R",9.0,176.19724,-37.66992,176.19756,-37.66968],[106,"I",16.0,176.19553,-37.67033,176.1957,-37.67005],[107,"R",9.0,176.20376,-37.66847,176.20402,-37.66835],[108,"R",9.0,176.21176,-37.68023,176.21193,-37.68009],[109,"R",9.0,176.21193,-37.68,176.21213,-37.67976],[110,"R",9.0,176.21065,-37.68015,176.2109,-37.68002]]
+  .map(a=>({id:"Lot "+a[0],zone:ZONE[a[1]],limit:a[2],bw:a[3],bs:a[4],be:a[5],bn:a[6]}));
+function parcelsUnderBox(w,s,e,n){ return PARCELS.filter(p=> !(p.be<w||p.bw>e||p.bn<s||p.bs>n)); }
+function zonesUnder(parcels){
+  const m=new Map();
+  for(const p of parcels){ if(!m.has(p.zone)) m.set(p.zone,{zone:p.zone,limit:p.limit,count:0}); m.get(p.zone).count++; }
+  return [...m.values()].sort((a,b)=>b.count-a.count);
+}
+
+// A small zoomed-in site diagram (parcel/footprint outline + coloured sample points) for the PDF.
+function siteDiagram(samples, ring, bbox){
+  const W=520,H=360,pad=26, cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  const g=cv.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,W,H);
+  let [w,s,e,n]=bbox; const padx=(e-w)*0.12||1e-4, pady=(n-s)*0.12||1e-4; w-=padx;e+=padx;s-=pady;n+=pady;
+  const sx=x=>pad+(x-w)/(e-w)*(W-2*pad), sy=y=>H-pad-(y-s)/(n-s)*(H-2*pad);
+  g.strokeStyle="#e2e8ef"; g.lineWidth=1; for(let i=0;i<=4;i++){ const gx=pad+i/4*(W-2*pad); g.beginPath(); g.moveTo(gx,pad);g.lineTo(gx,H-pad);g.stroke(); const gy=pad+i/4*(H-2*pad); g.beginPath(); g.moveTo(pad,gy);g.lineTo(W-pad,gy);g.stroke(); }
+  if(ring&&ring.length){ g.beginPath(); ring.forEach((p,i)=> i?g.lineTo(sx(p[0]),sy(p[1])):g.moveTo(sx(p[0]),sy(p[1]))); g.closePath(); g.fillStyle="rgba(37,99,235,.06)"; g.fill(); g.strokeStyle="#12202b"; g.lineWidth=1.6; g.stroke(); }
+  for(const p of samples){ g.beginPath(); g.arc(sx(p.lon),sy(p.lat),4.5,0,7); g.fillStyle=p.pen?"#c0392b":"#1a7a4a"; g.fill(); g.strokeStyle="#fff"; g.lineWidth=1; g.stroke(); }
+  g.fillStyle="#42576a"; g.font="12px Helvetica"; g.fillText("Site — sample points (red = penetration, green = clear)",pad,16);
+  return cv.toDataURL("image/png");
+}
+
+// Build a one-page PDF assessment report (matches the source tool's PDF export).
+function generatePDF(o){
+  const doc=new jsPDF({unit:"pt",format:"a4"}); const M=48; let y=58; const R=547;
+  const T=(s,x,yy)=>doc.text(String(s).replace(/→/g,"->").replace(/[−—–]/g,"-"),x,yy);
+  doc.setFont("helvetica","bold"); doc.setFontSize(17); doc.setTextColor(18,32,43);
+  T("Airspace Assessment Report",M,y);
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(90,110,130); y+=17;
+  T("Tauranga Aerodrome (NZTG) · Runway 07R/25L · ICAO Annex-14 obstacle limitation surfaces",M,y);
+  y+=12; doc.setDrawColor(210,218,226); doc.line(M,y,R,y); y+=24;
+  doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(18,32,43); T(o.subject,M,y); y+=20;
+  doc.setFontSize(10);
+  const kv=(k,v,color)=>{ doc.setFont("helvetica","normal"); doc.setTextColor(110,125,140); T(k,M,y);
+    doc.setFont("helvetica","bold"); doc.setTextColor(...(color||[30,40,50])); T(String(v),M+160,y); y+=16; };
+  o.meta.forEach(([k,v,c])=>kv(k,v,c));
+  y+=8; doc.setDrawColor(230); doc.line(M,y-4,R,y-4);
+  // verdict banner
+  const pen=o.penetrates; doc.setFillColor(...(pen?[251,234,231]:[231,246,238])); doc.roundedRect(M,y,R-M,26,4,4,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...(pen?[192,57,43]:[26,122,74]));
+  T(o.verdict,M+12,y+17); y+=42;
+  // surface table
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(18,32,43); T("By airspace surface",M,y); y+=16;
+  doc.setFontSize(9); doc.setTextColor(120,135,150);
+  T("Surface",M,y); T("Limit (m AMSL)",M+230,y); T("Margin (m)",M+360,y); y+=4;
+  doc.setDrawColor(225); doc.line(M,y,R,y); y+=13;
+  doc.setFontSize(10);
+  if(!o.surfaceRows.length){ doc.setFont("helvetica","normal"); doc.setTextColor(90,105,120); T("Outside all obstacle limitation surfaces — no airspace constraint.",M,y); y+=15; }
+  o.surfaceRows.forEach(r=>{
+    doc.setFont("helvetica",r.gov?"bold":"normal"); doc.setTextColor(40,50,60);
+    T(r.surface+(r.gov?"  (governing)":""),M,y);
+    T(f1(r.limit),M+230,y);
+    doc.setTextColor(...(r.margin>0?[192,57,43]:[26,122,74])); T((r.margin>0?"+":"")+f1(r.margin),M+360,y); y+=15;
+  });
+  y+=12;
+  // council rules
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(18,32,43); T("Council planning rules picked up",M,y); y+=16;
+  doc.setFont("helvetica","normal"); doc.setFontSize(10); doc.setTextColor(50,60,70);
+  o.councilRows.forEach(r=>{ T("• "+r,M,y); y+=15; });
+  y+=8;
+  // diagram
+  try{ const img=siteDiagram(o.samples,o.ring,o.bbox); doc.addImage(img,"PNG",M,y,260,180); }catch(_){}
+  doc.setFontSize(8); doc.setTextColor(150,160,170);
+  T("Demo — surfaces computed client-side to ICAO Annex-14 from the real 07R/25L runway.",M,806);
+  T("Parcels are demo cadastre (OSM footprints, LINZ 8 m DEM). Not for operational use. "+new Date().toISOString().slice(0,10),M,816);
+  doc.save(o.file);
+}
+
 /* ---------- boot ---------- */
+let lastRun=null;   // last parcel/footprint sampling run, for point interrogation + PDF
+
+function renderPoint(a, ctx){
+  const box=document.getElementById("ptout");
+  if(!box) return;
+  if(a.outside){ box.innerHTML=`<div class="result out"><div class="head">◇ Point outside protected airspace</div><div class="body"><div class="hint">${esc(ctx)}</div></div></div>`; return; }
+  const cls=a.penetrates?"pen":"clr";
+  const rows=a.all.slice().sort((x,y)=>x.limit-y.limit).map(s=>
+    `<div class="surf ${s.surface===a.surface?'gov':''}"><span>${esc(s.surface)}${s.surface===a.surface?' · governing':''}</span>
+     <span class="m ${s.margin>0?'pen':'ok'}">${f1(s.limit)} m · ${s.margin>0?'+':''}${f1(s.margin)}</span></div>`).join("");
+  box.innerHTML=`<div class="result ${cls}"><div class="head">Interrogated point — ${a.penetrates?`+${f1(a.penetration)} m into ${esc(a.surface)}`:`clear of ${esc(a.surface)}`}</div>
+    <div class="body"><div class="hint">${esc(ctx)}</div><div class="surf-list"><div class="st">Surfaces here</div>${rows}</div></div></div>`;
+}
+function interrogate(lat,lon){
+  if(!lastRun||!lastRun.samples.length) return false;
+  let best=null,bd=Infinity;
+  for(const s of lastRun.samples){ const d=(s.lat-lat)**2+(s.lon-lon)**2; if(d<bd){bd=d;best=s;} }
+  if(!best) return false;
+  renderPoint(best.a, `ground ${f1(best.ground)} m · structure top ${f1(lastRun.top)} m AMSL · ${best.lat.toFixed(5)}, ${best.lon.toFixed(5)}`);
+  return true;
+}
+function pdfFromRun(){
+  const r=lastRun; if(!r||!r.samples.length) return;
+  const penCount=r.samples.filter(s=>s.pen).length, penetrates=penCount>0;
+  const ref = r.worst || (()=>{ const mid=r.samples.find(s=>!s.a.outside); return mid?mid.a:null; })();
+  const surfaceRows = (ref&&ref.all) ? ref.all.slice().sort((a,b)=>a.limit-b.limit)
+      .map(s=>({surface:s.surface,limit:s.limit,margin:s.margin,gov:s.surface===ref.surface})) : [];
+  const verdict = penetrates
+    ? `Penetrates airspace — ${penCount} of ${r.samples.length} points exceed a surface (worst +${f1(r.worst.penetration)} m, ${r.worst.surface})`
+    : `Clear — no sample point penetrates the obstacle limitation surfaces`;
+  const subj = r.kind==="parcel" ? r.subject : "Custom footprint";
+  generatePDF({
+    subject: subj,
+    meta: [
+      ["Proposed", `${f1(r.height)} m ${r.kind==="parcel"?r.datum:"RL / FFL"} → ${f1(r.top)} m AMSL`],
+      ["Sample points", String(r.samples.length)],
+      ["Penetrating", `${penCount} / ${r.samples.length}`, penetrates?[192,57,43]:[26,122,74]],
+    ],
+    penetrates, verdict, surfaceRows, councilRows: r.council&&r.council.length?r.council:["None within the footprint extent."],
+    samples: r.samples, ring: r.ring, bbox: r.bbox,
+    file: subj.replace(/\s+/g,"_")+"_airspace_report.pdf",
+  });
+}
+
 let felt;
 const mode = { current:"site", armed:null };
 const els = { site:[], parcelSamples:[], obst:[], draw:[], drawn:null };
@@ -296,7 +413,9 @@ async function sampleLayer(name, pts){ // pts:[{lat,lon,pen}] -> two runtime lay
 
 function initFelt(){
   return Felt.embed(document.getElementById("map"), CONFIG.mapId, {
-    uiControls:{ showLegend:true, cooperativeGestures:false }
+    uiControls:{ showLegend:true, cooperativeGestures:false },
+    // frame the aerodrome from the first paint — the map's saved viewport is world-zoom
+    initialViewport:{ center:{ latitude:P.lat0, longitude:P.lon0 }, zoom:12.5 }
   }).then(f=>{ felt=f; });
 }
 
@@ -318,6 +437,7 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",async ()
   document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
   t.classList.add("active"); document.getElementById("p-"+t.dataset.tab).classList.add("active");
   mode.current=t.dataset.tab; mode.armed=null;
+  lastRun=null; const pt=document.getElementById("ptout"); if(pt) pt.innerHTML="";
   // clear transient layers when leaving a mode (keep obstacles + drawn polygon)
   await delEls(els.site); await delLayers(els.parcelSamples); await delLayers(els.draw);
 }));
@@ -394,7 +514,7 @@ async function runParcel(){
     const lon=p.bw+(p.be-p.bw)*((i+0.5)/N), lat=p.bs+(p.bn-p.bs)*((j+0.5)/N);
     const a=assess(lat,lon,top);
     const pen=!a.outside && a.penetrates;
-    pts.push({lat,lon,pen});
+    pts.push({lat,lon,pen,a,ground});
     if(!a.outside && a.penetrates){
       bySurface[a.surface]=(bySurface[a.surface]||0)+1;
       if(!worst||a.penetration>worst.penetration) worst={...a,lat,lon};
@@ -402,8 +522,11 @@ async function runParcel(){
   }
   els.parcelSamples.push(...await sampleLayer("Parcel samples",pts));
   const total=pts.length, penCount=pts.filter(x=>x.pen).length;
-  window.__lastParcel={parcel:p,datum:parcelDatum.v,height:h,top,samples:pts,worst};
-  renderParcel(out,{p,total,penCount,bySurface,worst,h,top});
+  lastRun={ kind:"parcel", subject:p.parcel_id, samples:pts, ring:null,
+    bbox:[p.bw,p.bs,p.be,p.bn], datum:parcelDatum.v, height:h, top, worst,
+    council:[`${p.zone} zone — council height limit ${f1(p.council_height_limit_m)} m ${h>p.council_height_limit_m?"(EXCEEDED by proposal)":"(within limit)"}`] };
+  window.__lastParcel=lastRun;
+  renderParcel(out,{p,total,penCount,bySurface,worst,h,top,datum:parcelDatum.v});
 }
 
 function renderParcel(out,d){
@@ -420,21 +543,22 @@ function renderParcel(out,d){
       ${worst?`<div class="kv"><span class="k">Worst penetration</span><span class="v">+${f1(worst.penetration)} m (${esc(worst.surface)})</span></div>`:''}
       <div class="kv"><span class="k">Council height rule</span><span class="v" style="color:${councilExceed?'var(--bad)':'var(--good)'}">${f1(p.council_height_limit_m)} m ${councilExceed?'· exceeded':'· ok'}</span></div>
       ${surfRows?`<div class="surf-list"><div class="st">Penetration by surface</div>${surfRows}</div>`:''}
-      <div class="row" style="margin-top:12px">
+      <div class="hint" style="margin-top:10px">Click any sampled point on the map to interrogate it individually — useful on sloping ground.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="parcel-pdf">Generate PDF report</button>
         <button class="btn ghost" id="parcel-geojson">Export GeoJSON</button>
-        <button class="btn ghost" id="parcel-print">Print report</button>
       </div>
     </div></div>`;
   document.getElementById("parcel-geojson").onclick=()=>exportParcelGeoJSON();
-  document.getElementById("parcel-print").onclick=()=>window.print();
+  document.getElementById("parcel-pdf").onclick=()=>pdfFromRun();
 }
 function exportParcelGeoJSON(){
-  const d=window.__lastParcel; if(!d) return;
-  const fc={type:"FeatureCollection",properties:{parcel:d.parcel.parcel_id,proposed_top_amsl_m:d.top},
-    features:d.samples.map(s=>{const a=assess(s.lat,s.lon,d.top);return{type:"Feature",
-      properties:{penetrates:!a.outside&&a.penetrates,governing_surface:a.outside?null:a.surface,limit_amsl_m:a.outside?null:a.limit,margin_m:a.outside?null:a.penetration},
-      geometry:{type:"Point",coordinates:[s.lon,s.lat]}};})};
-  download(`${d.parcel.parcel_id.replace(/\s+/g,'_')}_assessment.geojson`, JSON.stringify(fc,null,1));
+  const d=lastRun; if(!d) return;
+  const fc={type:"FeatureCollection",properties:{parcel:d.subject,proposed_top_amsl_m:d.top},
+    features:d.samples.map(s=>({type:"Feature",
+      properties:{penetrates:!s.a.outside&&s.a.penetrates,governing_surface:s.a.outside?null:s.a.surface,limit_amsl_m:s.a.outside?null:s.a.limit,margin_m:s.a.outside?null:s.a.penetration},
+      geometry:{type:"Point",coordinates:[s.lon,s.lat]}}))};
+  download(`${d.subject.replace(/\s+/g,'_')}_assessment.geojson`, JSON.stringify(fc,null,1));
 }
 
 /* ---------- OBSTACLES ---------- */
@@ -506,12 +630,20 @@ document.getElementById("draw-run").addEventListener("click",async()=>{
     const lon=minx+(maxx-minx)*((i+0.5)/N), lat=miny+(maxy-miny)*((j+0.5)/N);
     if(!pointInRing(lon,lat,drawRing)) continue;
     const a=assess(lat,lon,ffl); const pen=!a.outside&&a.penetrates;
-    pts.push({lat,lon,pen});
+    pts.push({lat,lon,pen,a,ground:groundElev(lat,lon)});
     if(pen){ bySurface[a.surface]=(bySurface[a.surface]||0)+1; if(!worst||a.penetration>worst.penetration) worst={...a}; }
   }
   els.draw.push(...await sampleLayer("Footprint samples",pts));
   const penCount=pts.filter(x=>x.pen).length;
+  // council planning rules picked up across the footprint
+  const zones=zonesUnder(parcelsUnderBox(minx,miny,maxx,maxy));
+  const councilRows = zones.length
+    ? zones.map(z=>`${z.zone} zone (${z.count} lot${z.count>1?"s":""}) — height limit ${f1(z.limit)} m${ffl>z.limit?" · proposal exceeds":""}`)
+    : ["No mapped cadastre within the footprint extent."];
+  lastRun={ kind:"draw", subject:"Custom footprint", samples:pts, ring:drawRing,
+    bbox:[minx,miny,maxx,maxy], height:ffl, top:ffl, worst, council:councilRows };
   const surfRows=Object.entries(bySurface).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`<div class="surf"><span>${esc(s)}</span><span class="m pen">${c} samples</span></div>`).join("");
+  const zoneRows=zones.map(z=>`<div class="surf"><span>${esc(z.zone)} · ${z.count} lot${z.count>1?"s":""}</span><span class="m ${ffl>z.limit?'pen':'ok'}">limit ${f1(z.limit)} m</span></div>`).join("");
   out.innerHTML=`<div class="result ${penCount?'pen':'clr'}"><div class="head">
       ${penCount?`▲ ${penCount} of ${pts.length} points penetrate`:'✓ Footprint clear'}</div>
     <div class="body">
@@ -519,8 +651,20 @@ document.getElementById("draw-run").addEventListener("click",async()=>{
       <div class="kv"><span class="k">Points inside footprint</span><span class="v">${pts.length}</span></div>
       ${worst?`<div class="kv"><span class="k">Worst penetration</span><span class="v">+${f1(worst.penetration)} m (${esc(worst.surface)})</span></div>`:''}
       ${surfRows?`<div class="surf-list"><div class="st">Penetration by surface</div>${surfRows}</div>`:''}
-      <div class="hint">Each point is tested against the governing surface at its own location — the reason a footprint on sloping ground can clear in one corner and bust in another.</div>
+      ${zoneRows?`<div class="surf-list"><div class="st">Council planning rules picked up</div>${zoneRows}</div>`:''}
+      <div class="hint">Each point is tested against the governing surface at its own location — the reason a footprint on sloping ground can clear in one corner and bust in another. Click any point to interrogate it.</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="draw-pdf">Generate PDF report</button>
+        <button class="btn ghost" id="draw-geojson">Export GeoJSON</button>
+      </div>
     </div></div>`;
+  document.getElementById("draw-pdf").onclick=()=>pdfFromRun();
+  document.getElementById("draw-geojson").onclick=()=>{
+    const fc={type:"FeatureCollection",features:pts.map(s=>({type:"Feature",
+      properties:{penetrates:s.pen,governing_surface:s.a.outside?null:s.a.surface,limit_amsl_m:s.a.outside?null:s.a.limit,margin_m:s.a.outside?null:s.a.penetration},
+      geometry:{type:"Point",coordinates:[s.lon,s.lat]}}))};
+    download("footprint_assessment.geojson",JSON.stringify(fc,null,1));
+  };
 });
 
 function felt_onCreateEnd(){ /* placeholder; real handler wired in init once felt exists */ }
@@ -535,15 +679,21 @@ document.getElementById("theme").addEventListener("click",()=>{
 document.getElementById("notes").innerHTML=
   `Demo — Tauranga (NZTG). OLS computed from the real 07R/25L runway to ICAO Annex-14 (Code 3/4, non-precision assumed). `+
   `Parcels are demo cadastre from OSM building footprints with LINZ 8 m DEM ground levels. `+
-  `AGL heights use a baked terrain grid (LINZ 8 m DEM sampled across the area); “Export GeoJSON” downloads real results; “Print report” uses the browser (a static app can’t run a server-side PDF). Logged obstacles are session-only.`;
+  `AGL heights use a baked terrain grid (LINZ 8 m DEM sampled across the area). Parcel and footprint runs generate a real PDF report and a GeoJSON of every sample. Council rules are the zone + height limit carried on each demo parcel. Logged obstacles are session-only.`;
 
 /* ---------- init ---------- */
 (async function init(){
  try{
   await initFelt();
-  // the map's saved viewport is unreliable (loads at world zoom) — always open on the
-  // aerodrome. fitViewportToBounds fixes only the center on this embed; explicit zoom works.
-  try{ await felt.setViewport({ center:{ latitude:P.lat0, longitude:P.lon0 }, zoom:12.5 }); }catch(_){}
+  // The embedded map's saved viewport is world zoom (zoom 1), and the embed keeps re-applying
+  // it during load — a one-shot setViewport loses the race, leaving the (tiny) parcels off
+  // screen so the Parcel tab looks broken. Guard the camera for the session: whenever it drops
+  // to world zoom (only the clobber does that — never normal use at a single aerodrome), pull
+  // it back. Self-heals no matter how late the snap arrives; parcel select (zoom ~17) is safe.
+  setInterval(async ()=>{
+    let v; try{ v=await felt.getViewport(); }catch(_){ return; }
+    if(v && v.zoom < 8){ try{ await felt.setViewport({ center:{ latitude:P.lat0, longitude:P.lon0 }, zoom:12.5 }); }catch(_){} }
+  }, 600);
   window.__felt = felt;
   window.__groundProbe = groundElev;
   // wire the draw-complete handler now that felt exists
@@ -562,11 +712,14 @@ document.getElementById("notes").innerHTML=
     const lat=e.coordinate?.latitude, lon=e.coordinate?.longitude;
     if(lat==null||lon==null) return;
     if(mode.current==="site" && mode.armed==="site"){ mode.armed=null; runSite(lat,lon); }
-    else if(mode.current==="parcel" && mode.armed==="parcel"){
-      const feat=(e.features||[]).find(f=>f.layerId===CONFIG.parcelLayerId);
-      if(feat){ mode.armed=null; onParcelPicked(feat); }
+    else if(mode.current==="parcel"){
+      if(mode.armed==="parcel"){
+        const feat=(e.features||[]).find(f=>f.layerId===CONFIG.parcelLayerId);
+        if(feat){ mode.armed=null; onParcelPicked(feat); }
+      } else if(lastRun && lastRun.kind==="parcel"){ interrogate(lat,lon); }
     }
     else if(mode.current==="obst" && mode.armed==="obst"){ mode.armed=null; addObstacle(lat,lon); }
+    else if(mode.current==="draw"){ if(lastRun && lastRun.kind==="draw") interrogate(lat,lon); }
   }});
   document.getElementById("loading").remove();
   window.__ready=true;

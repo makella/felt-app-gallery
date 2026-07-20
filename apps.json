@@ -2,10 +2,11 @@
   {
     "slug": "tauranga-airspace-assessment",
     "title": "Tauranga Airspace Assessment",
-    "description": "ICAO Annex-14 OLS demo for Tauranga (NZTG) runway 07R/25L: drop a test structure, assess a whole cadastral parcel, log obstacles, or draw a multi-lot footprint — each checked against inner horizontal, conical, approach, and transitional surfaces with AGL/AMSL/RL datums and a baked LINZ 8 m terrain grid. Exports results as GeoJSON.",
+    "description": "ICAO Annex-14 OLS demo for Tauranga (NZTG) runway 07R/25L: drop a test structure, assess a whole cadastral parcel, log obstacles, or draw a multi-lot footprint, each checked against inner horizontal, conical, approach, and transitional surfaces with AGL/AMSL/RL datums and a baked LINZ 8 m terrain grid. Parcel and footprint runs generate a one-page PDF report and a GeoJSON of every sample, pick up the council zone height rules they cross, and let you click any sampled point to interrogate it on sloping ground.",
     "map_url": "https://felt.com/map/dLXY9AOLuTaujX7XN3YxRjC",
     "author": "makella",
     "published_at": "2026-07-17",
+    "updated_at": "2026-07-20",
     "remix_prompt": "Remix https://makella.github.io/felt-app-gallery/apps/tauranga-airspace-assessment/ — add a batch mode that assesses an uploaded GeoJSON of proposed structures in one pass."
   },
   {
